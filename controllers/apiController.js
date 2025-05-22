@@ -1,5 +1,7 @@
 const db = require('../models');
-const { User, UserMeta,NewsCategory,News,JobsCategory,Jobs,EventsCategory,Events,ParksAndRecreationContent,ParksAndRecreationCategory} = require('../models');
+const { User, UserMeta,NewsCategory,News,JobsCategory,Jobs,EventsCategory,Events,ParksAndRecreationContent,ParksAndRecreationCategory,
+  ParksAndRecreation
+} = require('../models');
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
@@ -791,6 +793,68 @@ exports.getAllJobs = async (req, res) => {
   }
 };
 
+exports.getJobsByCategoryId = async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.categoryId);
+    const keyword = req.query.keyword || '';
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const { count, rows: jobs } = await Jobs.findAndCountAll({
+      where: {
+        status: 1,
+        category_id: categoryId,
+        [Op.or]: [
+          { title: { [Op.like]: `%${keyword}%` } },
+          { description: { [Op.like]: `%${keyword}%` } },
+          { shortdescription: { [Op.like]: `%${keyword}%` } }
+        ]
+      },
+      limit,
+      offset,
+      order: [['published_at', 'DESC']],
+      include: [
+        {
+          model: JobsCategory,
+          as: 'category',
+          attributes: ['id', 'name']
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+
+    const updatedJobs = jobs.map(job => ({
+      ...job.toJSON(),
+      featured_image: job.featured_image 
+        ? baseUrl + job.featured_image 
+        : null
+    }));
+
+    return res.status(200).json({
+      success: updatedJobs.length > 0,
+      message: updatedJobs.length > 0 ? 'Jobs fetched successfully' : 'No jobs found for this category',
+      data: updatedJobs,
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching jobs by category:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 exports.getJobById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1435,6 +1499,202 @@ exports.getParksAndRecreationCategoryById = async (req, res) => {
   }
 };
 
+
+exports.addParksAndRecreation = async (req, res) => {
+  try {
+    const {
+      userId,
+      category_id,
+      title,
+      description,
+      shortdescription,
+      facilities,
+      link,
+      date,
+      time,
+      organizor,
+      status,
+      published_at
+    } = req.body;
+
+    // File handling
+    const featuredImageFile = req.files?.['featured_image']?.[0] || null;
+    const additionalImages = req.files?.['images'] || [];
+
+    const featured_image = featuredImageFile ? featuredImageFile.filename : null;
+    const images = additionalImages.length > 0 ? additionalImages.map(file => file.filename).join(',') : null;
+
+    // Create the ParksAndRecreation record
+    const record = await ParksAndRecreation.create({
+      userId,
+      category_id,
+      title,
+      description,
+      shortdescription,
+      featured_image,
+      images,
+      facilities,
+      link,
+      date,
+      time,
+      organizor,
+      status: status || 1,
+      published_at
+    });
+
+    return res.status(201).json({
+      message: 'Parks and Recreation content created successfully',
+      data: record
+    });
+  } catch (error) {
+    console.error('Error adding Parks and Recreation content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updateParksAndRecreation = async (req, res) => {
+  try {
+    const {
+      id, // ID of the ParksAndRecreation record to update
+      userId,
+      title,
+      description,
+      shortdescription,
+      link,
+      category_id,
+      date,
+      time,
+      organizor,
+      status,
+      published_at,
+      facilities // JSON string or array
+    } = req.body;
+
+    // Find the record by ID
+    const park = await ParksAndRecreation.findByPk(id);
+
+    if (!park) {
+      return res.status(404).json({ message: 'Parks & Recreation record not found' });
+    }
+
+    // Handle file uploads
+    const featuredImageFile = req.files?.['featured_image']?.[0] || null;
+    const imagesFiles = req.files?.['images'] || [];
+
+    // Update fields conditionally
+    if (userId) park.userId = userId;
+    if (title) park.title = title;
+    if (description) park.description = description;
+    if (shortdescription) park.shortdescription = shortdescription;
+    if (link) park.link = link;
+    if (category_id) park.category_id = category_id;
+    if (date) park.date = date;
+    if (time) park.time = time;
+    if (organizor) park.organizor = organizor;
+    if (typeof status !== 'undefined') park.status = status;
+    if (published_at) park.published_at = published_at;
+
+    // Parse facilities JSON if present
+    if (facilities) {
+      park.facilities = facilities;
+    }
+
+    // Update file paths if uploaded
+    if (featuredImageFile) park.featured_image = featuredImageFile.filename;
+    if (imagesFiles.length > 0) park.images = imagesFiles.map(file => file.filename).join(',');
+
+    // Save the updated record
+    await park.save();
+
+    return res.status(200).json({
+      message: 'Parks & Recreation record updated successfully',
+      data: park
+    });
+
+  } catch (error) {
+    console.error('Error updating Parks & Recreation:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.deleteParksAndRecreationById = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: 'ID is required' });
+    }
+
+    const park = await ParksAndRecreation.findByPk(id);
+
+    if (!park) {
+      return res.status(404).json({ message: 'Parks & Recreation record not found' });
+    }
+
+    await park.destroy();
+
+    return res.status(200).json({ message: 'Record deleted successfully' });
+
+  } catch (error) {
+    console.error('Error deleting record:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.categoryId);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const { count, rows } = await ParksAndRecreation.findAndCountAll({
+      where: {
+        status: 1,
+        category_id: categoryId
+      },
+      limit,
+      offset,
+      order: [['published_at', 'DESC']],
+      include: [
+        {
+          model: ParksAndRecreationCategory,
+          as: 'category',
+          attributes: ['id', 'name']
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+
+    const updatedRows = rows.map(item => ({
+      ...item.toJSON(),
+      featured_image: item.featured_image ? baseUrl + item.featured_image : null,
+      images: item.images
+        ? item.images.split(',').map(filename => baseUrl + filename)
+        : []
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Parks and Recreation items fetched successfully',
+      data: updatedRows,
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching parks and recreation by category:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 // controllers/apiController.js
 
 exports.getApiDocumentation = (req, res) => {

@@ -46,6 +46,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'parentId',
         as: 'parent'
       });
+        // Category has many ParksAndRecreation entries
+      ParksAndRecreationCategory.hasMany(models.ParksAndRecreation, {
+        foreignKey: 'category_id',
+        as: 'parks'
+      });
     };
   
     return ParksAndRecreationCategory;

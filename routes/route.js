@@ -51,6 +51,7 @@ router.post('/auth/addjob',[
   );
   router.post('/auth/deletejob',verifyToken, apiController.deleteJob);
   router.get('/auth/getalljobs', apiController.getAllJobs);
+  router.get('/auth/getjobsbycategory/:categoryId', apiController.getJobsByCategoryId);
   router.get('/auth/getJobById/:id', apiController.getJobById);
 
 
@@ -103,6 +104,20 @@ router.post('/auth/addevent',[
   router.post('/auth/deleteParksAndRecreationCategory',verifyToken, apiController.deleteParksAndRecreationCategory);
   router.get('/auth/getAllParksAndRecreationCategories', apiController.getAllParksAndRecreationCategories);
   router.get('/auth/getParksAndRecreationCategoryById/:id', apiController.getParksAndRecreationCategoryById);
+  router.post('/auth/addParksAndRecreation',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 }, // Multiple images (up to 5)
+      { name: 'images', maxCount: 50 }
+    ])
+  ], apiController.addParksAndRecreation);
 
+    router.post('/auth/updateParksAndRecreation', upload.fields([
+    { name: 'featured_image', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+  ]), apiController.updateParksAndRecreation);
+  router.post('/auth/deleteParksAndRecreationById',verifyToken, apiController.deleteParksAndRecreationById);
+
+ router.get('/auth/getAllParksAndRecreationByCategoryId/:categoryId', apiController.getAllParksAndRecreationByCategoryId);
 
 module.exports = router;

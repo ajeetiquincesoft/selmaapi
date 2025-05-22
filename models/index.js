@@ -19,6 +19,8 @@ db.EventsCategory = require('./eventscategory')(sequelize, DataTypes);
 db.Events = require('./events')(sequelize, DataTypes);
 db.ParksAndRecreationContent = require('./parksandrecreationcontent')(sequelize,DataTypes);
 db.ParksAndRecreationCategory = require('./parksandrecreationcategory')(sequelize,DataTypes);
+
+db.ParksAndRecreation =require('./parksandrecreation')(sequelize,DataTypes)
 // ✅ Associate after all models are initialized
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
