@@ -1,0 +1,108 @@
+const express = require('express');
+const router = express.Router();
+const apiController = require('../controllers/apiController');
+const verifyToken = require('../middleware/verifyToken');
+const upload = require('../middleware/upload');
+router.get('/auth/apidocs', apiController.getApiDocumentation);
+router.post('/auth/login', apiController.login);
+router.post('/auth/forgotPassword', apiController.forgotPassword);
+
+router.get('/auth/users',verifyToken, apiController.getUsersWithMeta);
+router.get('/auth/unicusers',verifyToken, apiController.getUnicUsersWithMeta);
+router.post('/auth/insertuser',verifyToken, apiController.adduser);
+router.get('/auth/getauthuser',verifyToken, apiController.getauthuser);
+router.post('/auth/updateAuthUser',verifyToken, apiController.updateAuthUser);
+router.post('/auth/updatePassword',verifyToken, apiController.updatePassword);
+router.post('/auth/uploadProfilePic', verifyToken, apiController.uploadProfilePic);
+router.post('/auth/addnewscategory',verifyToken, apiController.addnewscategory);
+router.get('/auth/getallnewscategory', apiController.getAllNewsCategories);
+router.post('/auth/updatenewscategory',verifyToken, apiController.updateNewsCategory);
+router.post('/auth/deletenewscategory',verifyToken,apiController.deletenewsCategory);
+router.post('/auth/addnews',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 },  // Single featured image
+      { name: 'images', maxCount: 5 }            // Multiple images (up to 5)
+    ])
+  ], apiController.addNews);
+router.post('/auth/updatenews', upload.fields([
+    { name: 'featured_image', maxCount: 1 },
+    { name: 'images', maxCount: 5 }
+  ]), apiController.updateNews);
+router.post('/auth/deletenews',verifyToken, apiController.deleteNews);
+router.get('/auth/getallnews', apiController.getAllNews);
+router.get('/auth/getNewsById/:id', apiController.getNewsById);
+
+router.post('/auth/addjobcategory',verifyToken, apiController.addJobsCategory);
+router.get('/auth/getalljobcategory', apiController.getAllJobsCategories);
+router.post('/auth/updatejobcategory',verifyToken, apiController.updateJobsCategory);
+router.post('/auth/deletejobcategory',verifyToken,apiController.deleteJobsCategory);
+
+router.post('/auth/addjob',[
+    verifyToken,                    // Auth middleware
+    upload.single('featured_image') // File upload middleware
+  ], apiController.addJob);
+
+  router.post('/auth/updatejob', 
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 }
+    ]), 
+    apiController.updateJob
+  );
+  router.post('/auth/deletejob',verifyToken, apiController.deleteJob);
+  router.get('/auth/getalljobs', apiController.getAllJobs);
+  router.get('/auth/getJobById/:id', apiController.getJobById);
+
+
+router.post('/auth/addeventcategory',verifyToken, apiController.addEventsCategory);
+router.post('/auth/updateeventcategory',verifyToken, apiController.updateEventsCategory);
+router.post('/auth/deleteeventcategory',verifyToken,apiController.deleteEventsCategory);
+router.get('/auth/getalleventcategory', apiController.getAllEventsCategories);
+router.post('/auth/addevent',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 },  // Single featured image
+      { name: 'files', maxCount: 5 }            // Multiple images (up to 5)
+    ])
+  ], apiController.addEvent);
+
+  router.post('/auth/updateevent', upload.fields([
+    { name: 'featured_image', maxCount: 1 },
+    { name: 'files', maxCount: 10 }
+  ]), apiController.updateEvent);
+
+  router.post('/auth/deleteevent',verifyToken, apiController.deleteEvent);
+  router.get('/auth/getallevents', apiController.getAllEvents);
+  router.get('/auth/getEventById/:id', apiController.getEventById);
+
+  router.post('/auth/addparksandrecreationcontent',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'image', maxCount: 1 },  // Single featured image
+    ])
+  ], apiController.addParksAndRecreationContent);
+
+  router.post('/auth/updateparksandrecreationcontent', upload.fields([
+    { name: 'image', maxCount: 1 },
+  ]), apiController.updateParksAndRecreationContent);
+  router.get('/auth/getparksandrecreationcontent', apiController.getParksAndRecreationContent);
+  router.post('/auth/addParksAndRecreationCategory',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'image', maxCount: 1 } // Multiple images (up to 5)
+    ])
+  ], apiController.addParksAndRecreationCategory);
+
+  router.post('/auth/updateParksAndRecreationCategory',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'image', maxCount: 1 } // Multiple images (up to 5)
+    ])
+  ], apiController.updateParksAndRecreationCategory);
+
+  router.post('/auth/deleteParksAndRecreationCategory',verifyToken, apiController.deleteParksAndRecreationCategory);
+  router.get('/auth/getAllParksAndRecreationCategories', apiController.getAllParksAndRecreationCategories);
+  router.get('/auth/getParksAndRecreationCategoryById/:id', apiController.getParksAndRecreationCategoryById);
+
+
+module.exports = router;
