@@ -1,6 +1,6 @@
 const db = require('../models');
 const { User, UserMeta,NewsCategory,News,JobsCategory,Jobs,EventsCategory,Events,ParksAndRecreationContent,ParksAndRecreationCategory,
-  ParksAndRecreation,RecyclingAndGarbageContent,RecyclingAndGarbage
+  ParksAndRecreation,RecyclingAndGarbageContent,RecyclingAndGarbage,PagesCategory,Pages
 } = require('../models');
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs');
@@ -2010,6 +2010,253 @@ exports.getRecyclingAndGarbageById = async (req, res) => {
   }
 };
 
+exports.addPagesCategory = async (req, res) => {
+  const { userId, name } = req.body;
+
+  if (!name || name.trim() === '') {
+    return res.status(400).json({ message: 'Category name is required' });
+  }
+
+  try {
+    const category = await PagesCategory.create({ userId, name });
+    console.log(category);
+    res.status(201).json({
+      message: 'Pages category created successfully',
+      data: category
+    });
+  } catch (error) {
+    console.error('Error creating pages category:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updatePagesCategory = async (req, res) => {
+  try {
+    const { id, name, status } = req.body;
+
+    const category = await PagesCategory.findByPk(id);
+
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Update fields
+    if (name) category.name = name;
+    if (typeof status !== 'undefined') category.status = status;
+
+    await category.save();
+
+    res.status(200).json({
+      message: 'Category updated successfully',
+      data: category
+    });
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deletePagesCategory = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const category = await PagesCategory.findByPk(id);
+
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    await category.destroy();
+
+    res.status(200).json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.getAllPagesCategories = async (req, res) => {
+  try {
+    const categories = await PagesCategory.findAll({
+      where: { status: 1 }
+    });
+
+    res.status(200).json({
+      message: 'Active categories fetched successfully',
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
+exports.addPages = async (req, res) => {
+  try {
+    const {
+      userId,
+      title,
+      description,
+      shortdescription,
+      category_id,
+      status,
+      published_at
+    } = req.body;
+
+    // Get uploaded files
+    const featuredImageFile = req.files['featured_image'] ? req.files['featured_image'][0] : null;
+    const imagesFiles = req.files['images'] || [];
+
+    // Prepare fields to save
+    const featured_image = featuredImageFile ? featuredImageFile.filename : null;
+    const images = imagesFiles.length > 0 ? imagesFiles.map(file => file.filename).join(',') : null;
+
+    // Create the news record
+    const news = await Pages.create({
+      userId,
+      title,
+      description,
+      shortdescription,
+      featured_image,
+      images,
+      category_id,
+      status,
+      published_at
+    });
+
+    return res.status(201).json({
+      message: 'page added successfully',
+      data: news
+    });
+  } catch (error) {
+    console.error('Error adding news:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updatePages = async (req, res) => {
+  try {
+    const {
+      id, // ID of the page to update
+      userId,
+      title,
+      description,
+      shortdescription,
+      category_id,
+      status,
+      published_at
+    } = req.body;
+
+    // Find existing record
+    const page = await Pages.findByPk(id);
+
+    if (!page) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+
+    // Handle uploaded files
+    const featuredImageFile = req.files?.['featured_image']?.[0] || null;
+    const imagesFiles = req.files?.['images'] || [];
+
+    if (userId) page.userId = userId;
+    if (title) page.title = title;
+    if (description) page.description = description;
+    if (shortdescription) page.shortdescription = shortdescription;
+    if (category_id) page.category_id = category_id;
+    if (typeof status !== 'undefined') page.status = status;
+    if (published_at) page.published_at = published_at;
+
+    if (featuredImageFile) page.featured_image = featuredImageFile.filename;
+    if (imagesFiles.length > 0) {
+      page.images = imagesFiles.map(file => file.filename).join(',');
+    }
+
+    await page.save();
+
+    return res.status(200).json({
+      message: 'Page updated successfully',
+      data: page
+    });
+
+  } catch (error) {
+    console.error('Error updating page:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.deletePages = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const page = await Pages.findByPk(id);
+
+    if (!page) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+
+    await page.destroy();
+
+    return res.status(200).json({
+      message: 'Page deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting page:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deletePages = async (req, res) => {
+  try {
+    const {id} = req.body;
+
+    // Find the news article
+    const page = await Pages.findByPk(id);
+
+    if (!page) {
+      return res.status(404).json({ message: 'page not found' });
+    }
+
+    // Delete the news article
+    await page.destroy();
+
+    return res.status(200).json({ message: 'page deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting news:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.getAllPages = async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const pages = await Pages.findAll({
+      where: { status: 1 },
+      order: [['createdAt', 'DESC']]
+    });
+
+    const updatedPages = pages.map(page => ({
+      ...page.toJSON(),
+      featured_image: page.featured_image ? baseUrl + page.featured_image : null,
+      images: page.images 
+        ? page.images.split(',').map(img => baseUrl + img) 
+        : []
+    }));
+
+    return res.status(200).json({
+      message: 'Pages fetched successfully',
+      data: updatedPages
+    });
+  } catch (error) {
+    console.error('Error fetching pages:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 // controllers/apiController.js
 

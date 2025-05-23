@@ -22,6 +22,8 @@ db.ParksAndRecreationCategory = require('./parksandrecreationcategory')(sequeliz
 db.ParksAndRecreation =require('./parksandrecreation')(sequelize,DataTypes);
 db.RecyclingAndGarbageContent = require('./recyclingandgarbagecontent')(sequelize,DataTypes);
 db.RecyclingAndGarbage =require('./recyclingandgarbage')(sequelize,DataTypes);
+db.PagesCategory = require('./pagescategory')(sequelize, DataTypes);
+db.Pages = require('./pages')(sequelize, DataTypes);
 // ✅ Associate after all models are initialized
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {

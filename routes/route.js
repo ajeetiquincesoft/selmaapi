@@ -157,4 +157,32 @@ router.post('/auth/updateRecyclingAndGarbage',[
 router.post('/auth/deleteRecyclingAndGarbage',verifyToken, apiController.deleteRecyclingAndGarbage);
 router.get('/auth/getAllRecyclingAndGarbage', apiController.getAllRecyclingAndGarbage);
 router.get('/auth/getRecyclingAndGarbageById/:id', apiController.getRecyclingAndGarbageById);
+
+
+router.post('/auth/addpagescategory',verifyToken, apiController.addPagesCategory);
+router.post('/auth/updatePagesCategory',verifyToken, apiController.updatePagesCategory);
+router.post('/auth/deletePagesCategory',verifyToken,apiController.deletePagesCategory);
+router.get('/auth/getallpagescategory', apiController.getAllPagesCategories);
+
+
+router.post('/auth/addpages',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 },  // Single featured image
+      { name: 'images', maxCount: 5 }            // Multiple images (up to 5)
+    ])
+  ], apiController.addPages);
+
+  router.post('/auth/updatepages',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'featured_image', maxCount: 1 },  // Single featured image
+      { name: 'images', maxCount: 5 }            // Multiple images (up to 5)
+    ])
+  ], apiController.updatePages);
+
+  router.post('/auth/deletePages',verifyToken,apiController.deletePages);
+
+  router.get('/auth/getAllPages', apiController.getAllPages);
+
 module.exports = router;

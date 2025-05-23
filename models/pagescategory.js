@@ -19,9 +19,9 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   PagesCategory.associate = function (models) {
-    PagesCategory.hasMany(models.pages, {
+    PagesCategory.hasMany(models.Pages, {
       foreignKey: 'category_id',
-      as: 'page'
+      as: 'pages'
     });
   };
 
