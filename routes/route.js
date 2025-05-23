@@ -120,4 +120,41 @@ router.post('/auth/addevent',[
 
  router.get('/auth/getAllParksAndRecreationByCategoryId/:categoryId', apiController.getAllParksAndRecreationByCategoryId);
 
+   router.post('/auth/addRecyclingAndGarbageContent',[
+    verifyToken,                          // Auth middleware
+    upload.fields([
+      { name: 'image', maxCount: 1 },  // Single featured image
+    ])
+  ], apiController.addRecyclingAndGarbageContent);
+
+     router.post('/auth/updateRecyclingAndGarbageContent', upload.fields([
+    { name: 'image', maxCount: 1 }
+  ]), apiController.updateRecyclingAndGarbageContent);
+
+  // router.post('/auth/deleteRecyclingAndGarbageContent', verifyToken, apiController.deleteRecyclingAndGarbageContent);
+router.get('/auth/getRecyclingAndGarbageContent', apiController.getRecyclingAndGarbageContent);
+
+router.post('/auth/addRecyclingAndGarbage', [
+  verifyToken,
+  upload.fields([
+    { name: 'image', maxCount: 1 }
+  ])
+], apiController.addRecyclingAndGarbage);
+
+
+router.post('/auth/addRecyclingAndGarbage', [
+  verifyToken,
+  upload.fields([
+    { name: 'image', maxCount: 1 }
+  ])
+], apiController.addRecyclingAndGarbage);
+router.post('/auth/updateRecyclingAndGarbage',[
+  verifyToken,
+  upload.fields([
+    { name: 'image', maxCount: 1 }
+  ])
+], apiController.updateRecyclingAndGarbage);
+router.post('/auth/deleteRecyclingAndGarbage',verifyToken, apiController.deleteRecyclingAndGarbage);
+router.get('/auth/getAllRecyclingAndGarbage', apiController.getAllRecyclingAndGarbage);
+router.get('/auth/getRecyclingAndGarbageById/:id', apiController.getRecyclingAndGarbageById);
 module.exports = router;

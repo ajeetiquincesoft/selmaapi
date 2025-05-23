@@ -1,6 +1,6 @@
 const db = require('../models');
 const { User, UserMeta,NewsCategory,News,JobsCategory,Jobs,EventsCategory,Events,ParksAndRecreationContent,ParksAndRecreationCategory,
-  ParksAndRecreation
+  ParksAndRecreation,RecyclingAndGarbageContent,RecyclingAndGarbage
 } = require('../models');
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs');
@@ -1695,6 +1695,322 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+// exports.addRecyclingAndGarbageContent = async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       description,
+//       shortdescription,
+//       status
+//     } = req.body;
+
+//     // Get uploaded image file
+//     const imageFile = req.files?.['image']?.[0] || null;
+//     const image = imageFile ? imageFile.filename : null;
+
+//     // Create the record
+//     const record = await RecyclingAndGarbageContent.create({
+//       userId,
+//       image,
+//       description,
+//       shortdescription,
+//       status
+//     });
+
+//     return res.status(201).json({
+//       message: 'Recycling and Garbage content added successfully',
+//       data: record
+//     });
+//   } catch (error) {
+//     console.error('Error adding Recycling and Garbage content:', error);
+//     return res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
+exports.addRecyclingAndGarbageContent = async (req, res) => {
+  try {
+    const {
+      userId,
+      description,
+      shortdescription,
+      status
+    } = req.body;
+
+    // Get uploaded image file
+    const imageFile = req.files?.['image']?.[0] || null;
+    const image = imageFile ? imageFile.filename : null;
+
+    // Check if a record already exists
+    const existingRecord = await RecyclingAndGarbageContent.findOne();
+
+    if (existingRecord) {
+      // Update the existing record
+      existingRecord.userId = userId || existingRecord.userId;
+      existingRecord.description = description || existingRecord.description;
+      existingRecord.shortdescription = shortdescription || existingRecord.shortdescription;
+      existingRecord.status = typeof status !== 'undefined' ? status : existingRecord.status;
+      if (image) existingRecord.image = image;
+
+      await existingRecord.save();
+
+      return res.status(200).json({
+        message: 'Recycling and Garbage content updated successfully',
+        data: existingRecord
+      });
+    } else {
+      // Create a new record
+      const newRecord = await RecyclingAndGarbageContent.create({
+        userId,
+        image,
+        description,
+        shortdescription,
+        status
+      });
+
+      return res.status(201).json({
+        message: 'Recycling and Garbage content added successfully',
+        data: newRecord
+      });
+    }
+  } catch (error) {
+    console.error('Error adding/updating Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updateRecyclingAndGarbageContent = async (req, res) => {
+  try {
+    const {
+      id, // ID of the record to update
+      userId,
+      description,
+      shortdescription,
+      status
+    } = req.body;
+
+    // Find the existing record
+    const record = await RecyclingAndGarbageContent.findByPk(id);
+    if (!record) {
+      return res.status(404).json({ message: 'Content not found' });
+    }
+
+    // Handle uploaded image if any
+    const imageFile = req.files?.['image']?.[0] || null;
+    const image = imageFile ? imageFile.filename : null;
+
+    // Update fields if provided
+    if (userId) record.userId = userId;
+    if (description) record.description = description;
+    if (shortdescription) record.shortdescription = shortdescription;
+    if (typeof status !== 'undefined') record.status = status;
+    if (image) record.image = image;
+
+    // Save changes
+    await record.save();
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content updated successfully',
+      data: record
+    });
+  } catch (error) {
+    console.error('Error updating Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.deleteRecyclingAndGarbageContent = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    // Find record
+    const record = await RecyclingAndGarbageContent.findByPk(id);
+    if (!record) {
+      return res.status(404).json({ message: 'Content not found' });
+    }
+
+    // Delete record
+    await record.destroy();
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getRecyclingAndGarbageContent = async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const content = await RecyclingAndGarbageContent.findOne();
+
+    if (!content) {
+      return res.status(404).json({ message: 'Content not found' });
+    }
+
+    // Add full image path if image exists
+    const result = {
+      ...content.toJSON(),
+      image: content.image ? baseUrl + content.image : null
+    };
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content fetched successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error fetching Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.addRecyclingAndGarbage = async (req, res) => {
+  try {
+    const {
+      userId,
+      title,
+      description,
+      shortdescription,
+      status
+    } = req.body;
+
+    // File handling
+    const imageFile = req.files?.['image']?.[0] || null;
+    const image = imageFile ? imageFile.filename : null;
+
+    // Create the RecyclingAndGarbage record
+    const record = await RecyclingAndGarbage.create({
+      userId,
+      title,
+      image,
+      description,
+      shortdescription,
+      status: status || 1
+    });
+
+    return res.status(201).json({
+      message: 'Recycling and Garbage content created successfully',
+      data: record
+    });
+  } catch (error) {
+    console.error('Error adding Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+exports.updateRecyclingAndGarbage = async (req, res) => {
+  try {
+    const {
+      id,
+      userId,
+      title,
+      description,
+      shortdescription,
+      status
+    } = req.body;
+
+    const record = await RecyclingAndGarbage.findByPk(id);
+    if (!record) {
+      return res.status(404).json({ message: 'Record not found' });
+    }
+
+    const imageFile = req.files?.['image']?.[0] || null;
+    const image = imageFile ? imageFile.filename : record.image;
+
+    record.userId = userId || record.userId;
+    record.title = title || record.title;
+     record.description = description || record.description;
+    record.shortdescription = shortdescription || record.shortdescription;
+    record.status = typeof status !== 'undefined' ? status : record.status;
+    record.image = image;
+
+    await record.save();
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content updated successfully',
+      data: record
+    });
+  } catch (error) {
+    console.error('Error updating Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.deleteRecyclingAndGarbage = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const record = await RecyclingAndGarbage.findByPk(id);
+    if (!record) {
+      return res.status(404).json({ message: 'Record not found' });
+    }
+
+    await record.destroy();
+
+    return res.status(200).json({ message: 'Record deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.getAllRecyclingAndGarbage = async (req, res) => {
+  try {
+    const records = await RecyclingAndGarbage.findAll({
+      where: { status: 1 }, // Only fetch active records
+      order: [['createdAt', 'DESC']]
+    });
+
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const updatedRecords = records.map(record => ({
+      ...record.toJSON(),
+      image: record.image ? baseUrl + record.image : null
+    }));
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content fetched successfully',
+      data: updatedRecords
+    });
+  } catch (error) {
+    console.error('Error fetching Recycling and Garbage content:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getRecyclingAndGarbageById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const record = await RecyclingAndGarbage.findByPk(id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: 'Recycling and Garbage content not found'
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const updatedRecord = {
+      ...record.toJSON(),
+      image: record.image ? baseUrl + record.image : null
+    };
+
+    return res.status(200).json({
+      message: 'Recycling and Garbage content fetched successfully',
+      data: updatedRecord
+    });
+  } catch (error) {
+    console.error('Error fetching Recycling and Garbage content by ID:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 // controllers/apiController.js
 
 exports.getApiDocumentation = (req, res) => {
