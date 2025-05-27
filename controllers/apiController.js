@@ -1704,13 +1704,17 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
       ]
     });
 
-    const updatedRows = rows.map(item => ({
-      ...item.toJSON(),
-      featured_image: item.featured_image ? baseUrl + item.featured_image : null,
-      images: item.images
-        ? item.images.split(',').map(filename => baseUrl + filename)
-        : []
-    }));
+  const updatedRows = rows.map(item => {
+  const jsonItem = item.toJSON();
+  return {
+    ...jsonItem,
+    featured_image: jsonItem.featured_image ? baseUrl + jsonItem.featured_image : null,
+    images: jsonItem.images
+      ? jsonItem.images.split(',').map(filename => baseUrl + filename)
+      : [],
+    facilities: jsonItem.facilities ? JSON.parse(jsonItem.facilities) : null
+  };
+});
 
     return res.status(200).json({
       success: true,
