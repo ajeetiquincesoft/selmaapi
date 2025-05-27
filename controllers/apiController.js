@@ -1315,6 +1315,27 @@ exports.updateParksAndRecreationContent = async (req, res) => {
 exports.getParksAndRecreationContent = async (req, res) => {
   try {
     const { id } = req.params;
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    // Get category list
+    const categoriesRaw = await ParksAndRecreationCategory.findAll({
+      include: [
+        { model: User, as: 'user' },
+        {
+          model: ParksAndRecreationCategory,
+          as: 'parent',
+          attributes: ['id', 'name']
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Add base URL to category image field
+    const categories = categoriesRaw.map(cat => {
+      const catData = cat.toJSON();
+      catData.image = catData.image ? baseUrl + catData.image : null;
+      return catData;
+    });
 
     if (id) {
       const record = await ParksAndRecreationContent.findByPk(id);
@@ -1323,18 +1344,30 @@ exports.getParksAndRecreationContent = async (req, res) => {
         return res.status(404).json({ message: 'Record not found', success: false });
       }
 
-      return res.status(200).json({ data: record, success: true });
+      const recordData = record.toJSON();
+      recordData.image = recordData.image ? baseUrl + recordData.image : null;
+
+      return res.status(200).json({ data: recordData, categories, success: true });
     }
 
-    // Fetch all records if no ID is passed
-    const records = await ParksAndRecreationContent.findAll();
-    return res.status(200).json({ data: records, success: true });
+    const rawRecords = await ParksAndRecreationContent.findAll();
+
+    const records = rawRecords.map(record => {
+      const r = record.toJSON();
+      r.image = r.image ? baseUrl + r.image : null;
+    
+      return r;
+    });
+
+    return res.status(200).json({ data: records, categories, success: true });
 
   } catch (error) {
     console.error('Error fetching Parks and Recreation content:', error);
     return res.status(500).json({ message: 'Internal server error', success: false });
   }
 };
+
+
 
 exports.addParksAndRecreationCategory = async (req, res) => {
   const { userId, name, parentId, status } = req.body;
