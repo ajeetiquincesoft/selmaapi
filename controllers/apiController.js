@@ -2359,9 +2359,8 @@ exports.getAllPagesByCategoryId = async (req, res) => {
 
       // Decode council_members JSON and add base URL to each image
       try {
-         console.log('dddddd'+pageData.counsil_members);
+
         if (pageData.counsil_members) {
-          console.log('dddddd');
           const members = JSON.parse(pageData.counsil_members);
           pageData.counsil_members = members.map(member => ({
             ...member,
