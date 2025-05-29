@@ -185,4 +185,7 @@ router.post('/auth/addpages',[
 
   router.get('/auth/getAllPages', apiController.getAllPages);
 
+  router.get('/auth/getAllPagesByCategoryId/:categoryId', apiController.getAllPagesByCategoryId);
+
+
 module.exports = router;

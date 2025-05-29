@@ -1327,7 +1327,7 @@ exports.getParksAndRecreationContent = async (req, res) => {
           attributes: ['id', 'name']
         }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['createdAt', 'ASC']],
     });
 
     // Add base URL to category image field
@@ -2138,6 +2138,11 @@ exports.addPages = async (req, res) => {
       description,
       shortdescription,
       category_id,
+      name,
+      designation,
+      counsil_members,
+      address,
+      contacts,
       status,
       published_at
     } = req.body;
@@ -2159,6 +2164,11 @@ exports.addPages = async (req, res) => {
       featured_image,
       images,
       category_id,
+      name,
+      designation,
+      counsil_members,
+      address,
+      contacts,
       status,
       published_at
     });
@@ -2183,6 +2193,11 @@ exports.updatePages = async (req, res) => {
       description,
       shortdescription,
       category_id,
+      name,
+      designation,
+      counsil_members,
+      address,
+      contacts,
       status,
       published_at
     } = req.body;
@@ -2203,6 +2218,11 @@ exports.updatePages = async (req, res) => {
     if (description) page.description = description;
     if (shortdescription) page.shortdescription = shortdescription;
     if (category_id) page.category_id = category_id;
+    if(name) page.name = name;
+    if (designation) page.designation = designation;
+    if (counsil_members) page.counsil_members = counsil_members;
+    if (address) page.address = address;
+    if (contacts) page.contacts = contacts;
     if (typeof status !== 'undefined') page.status = status;
     if (published_at) page.published_at = published_at;
 
@@ -2225,26 +2245,26 @@ exports.updatePages = async (req, res) => {
 };
 
 
-exports.deletePages = async (req, res) => {
-  try {
-    const { id } = req.params;
+// exports.deletePages = async (req, res) => {
+//   try {
+//     const { id } = req.params;
 
-    const page = await Pages.findByPk(id);
+//     const page = await Pages.findByPk(id);
 
-    if (!page) {
-      return res.status(404).json({ message: 'Page not found' });
-    }
+//     if (!page) {
+//       return res.status(404).json({ message: 'Page not found' });
+//     }
 
-    await page.destroy();
+//     await page.destroy();
 
-    return res.status(200).json({
-      message: 'Page deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error deleting page:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
+//     return res.status(200).json({
+//       message: 'Page deleted successfully',
+//     });
+//   } catch (error) {
+//     console.error('Error deleting page:', error);
+//     return res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
 
 exports.deletePages = async (req, res) => {
   try {
@@ -2273,8 +2293,17 @@ exports.getAllPages = async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
 
     const pages = await Pages.findAll({
-      where: { status: 1 },
-      order: [['createdAt', 'DESC']]
+      where: { 
+        status: 1
+      },
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: PagesCategory,
+          as: 'category',
+          attributes: ['id', 'name']
+        }
+      ]
     });
 
     const updatedPages = pages.map(page => ({
@@ -2294,6 +2323,70 @@ exports.getAllPages = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+exports.getAllPagesByCategoryId = async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.categoryId);
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+
+    const pages = await Pages.findAll({
+      where: { 
+        status: 1,
+        category_id: categoryId
+      },
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: PagesCategory,
+          as: 'category',
+          attributes: ['id', 'name']
+        }
+      ]
+    });
+
+    const updatedPages = pages.map(page => {
+      const pageData = page.toJSON();
+
+      // Handle featured_image
+      pageData.featured_image = pageData.featured_image 
+        ? baseUrl + pageData.featured_image 
+        : null;
+
+      // Handle images array
+      pageData.images = pageData.images 
+        ? pageData.images.split(',').map(img => baseUrl + img) 
+        : [];
+
+      // Decode council_members JSON and add base URL to each image
+      try {
+         console.log('dddddd'+pageData.counsil_members);
+        if (pageData.counsil_members) {
+          console.log('dddddd');
+          const members = JSON.parse(pageData.counsil_members);
+          pageData.counsil_members = members.map(member => ({
+            ...member,
+            image: member.image ? baseUrl + member.image : null
+          }));
+        }
+      } catch (err) {
+        console.warn(`Failed to parse counsil_members for page id ${pageData.id}`);
+        pageData.counsil_members = [];
+      }
+
+      return pageData;
+    });
+
+    return res.status(200).json({
+      message: 'Pages fetched successfully',
+      data: updatedPages
+    });
+  } catch (error) {
+    console.error('Error fetching pages by category:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 
 // controllers/apiController.js
 

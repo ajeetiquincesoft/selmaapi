@@ -40,6 +40,30 @@ module.exports = {
         type: Sequelize.INTEGER,
         references: { model: 'PagesCategory', key: 'id' }
       },
+        name: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+        designation: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+        counsil_members: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+        address: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+       hours: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+        contacts: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
       status: {
         type: Sequelize.INTEGER,
         allowNull: false,
