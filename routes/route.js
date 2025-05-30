@@ -187,5 +187,7 @@ router.post('/auth/addpages',[
 
   router.get('/auth/getAllPagesByCategoryId/:categoryId', apiController.getAllPagesByCategoryId);
 
+  router.post('/sendContactForm',apiController.sendContactForm);
+
 
 module.exports = router;

@@ -9,6 +9,7 @@ app.use(express.json());
 
 const userRoutes = require('./routes/route');
 app.use('/api', userRoutes);
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('images'));
 db.sequelize.sync().then(() => {
   console.log('DB Synced');

@@ -81,23 +81,57 @@ exports.login = async (req, res) => {
   }
 };
 exports.getauthuser = async (req, res) => {
-  const userId = req.user.userId;
-  const user = await db.User.findOne({
-    where: { id: userId },
-    include: db.UserMeta
-  });
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+  try {
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(' ')[1]; // Format: "Bearer <token>"
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode the token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // Ensure your token payload has this structure
+
+    // Find user with UserMeta
+    const user = await db.User.findOne({
+      where: { id: userId },
+      include: 'meta'
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+
+  } catch (err) {
+    console.error("Get Auth User Error:", err);
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    res.status(500).json({ message: "Internal server error" });
   }
-  res.json(user);
 };
 exports.updateAuthUser = async (req, res) => {
-  const userId = req.user.userId;
-  const { name, role, email, profile_pic, address, phone, gender } = req.query;
   try {
+    // 1. Extract token
+    const token = req.headers.authorization?.split(' ')[1]; // Format: "Bearer <token>"
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    // 2. Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // Make sure your token payload contains "data.id"
+
+    // 3. Destructure query params (or use req.body if it's a POST request)
+    const { name, role, email, profile_pic, address, phone, gender } = req.query;
+
     if (!name || !email || !address || !phone || !gender) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
+
+    // 4. Find and update user
     const user = await db.User.findOne({ where: { id: userId }, include: db.UserMeta });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -108,31 +142,69 @@ exports.updateAuthUser = async (req, res) => {
     user.phone = phone;
     await user.save();
 
-    const userMeta = await db.UserMeta.findOne({ where: { userId: userId } });
-    userMeta.address = address;
-    userMeta.profile_pic = profile_pic;
-    userMeta.gender = gender;
-    await userMeta.save();
+    const userMeta = await db.UserMeta.findOne({ where: { userId } });
+    if (userMeta) {
+      userMeta.address = address;
+      userMeta.profile_pic = profile_pic;
+      userMeta.gender = gender;
+      await userMeta.save();
+    }
 
-    res.json({ message: 'User updated successfully', user });
+    return res.status(200).json({ message: 'User updated successfully', user });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error updating user:', err);
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 exports.updatePassword = async (req, res) => {
-  const userId = req.user.userId;
-  const { password, newpassword } = req.query;
-  const user = await db.User.findOne({ where: { id: userId } });
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: 'Invalid password' });
+  try {
+    const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({ message: 'All password fields are required' });
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({ message: 'New password and confirm password do not match' });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: 'Password updated successfully' });
+
+  } catch (error) {
+    console.error('Password update error:', error);
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+    return res.status(500).json({ message: 'Internal server error' });
   }
-  const hashedPassword = await bcrypt.hash(newpassword, 10); // 10 is the salt rounds
-  user.password = hashedPassword;
-  await user.save();
-  res.json({ message: 'User updated successfully', user });
 };
+
 exports.forgotPassword = async (req, res) => {
   const { email } = req.query;
 
@@ -2334,7 +2406,7 @@ exports.getAllPagesByCategoryId = async (req, res) => {
         status: 1,
         category_id: categoryId
       },
-      order: [['createdAt', 'DESC']],
+      order: [['createdAt', 'ASC']],
       include: [
         {
           model: PagesCategory,
@@ -2386,7 +2458,58 @@ exports.getAllPagesByCategoryId = async (req, res) => {
 };
 
 
+exports.sendContactForm = async (req, res) => {
+  try {
+    const {subject, name, email, phone, message } = req.body;
 
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: 'Name, email and message are required' });
+    }
+
+    // Set up transporter (use your real SMTP config)
+      const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+  const mailOptions = {
+  from: `"${name}" <${process.env.SMTP_USER}>`,
+  replyTo: email,
+  to: process.env.ADMIN_EMAIL,
+  subject: 'New Contact Form Submission',
+  text: `
+    Contact Form Details
+    Subject: ${subject}
+    Name: ${name}
+    Email: ${email}
+    Phone: ${phone || 'N/A'}
+    Message: ${message}
+  `,
+  html: `
+    <h3>Contact Form Details</h3>
+     <p><strong>Name:</strong> ${subject}</p>
+    <p><strong>Name:</strong> ${name}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+    <p><strong>Message:</strong><br>${message}</p>
+  `
+};
+
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Contact form submitted successfully' });
+
+  } catch (error) {
+    console.error('Error sending contact form:', error);
+    res.status(500).json({ message: 'Failed to send contact form' });
+  }
+};
 // controllers/apiController.js
 
 exports.getApiDocumentation = (req, res) => {
