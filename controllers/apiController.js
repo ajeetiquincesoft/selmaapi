@@ -22,7 +22,7 @@ const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
 const JWT_SECRET = process.env.JWT_SECRET;
-const { Op } = require("sequelize");
+const { Op, fn, col, where, literal } = require("sequelize");
 const { sequelize } = require("../models");
 exports.getUsersWithMeta = async (req, res) => {
   try {
@@ -1243,10 +1243,54 @@ exports.getAllEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const { keyword, dateFrom, dateTo, categoryName } = req.query;
+
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
+    const whereConditions = { status: 1 };
+
+    // 🔍 Keyword Search
+    if (keyword) {
+      whereConditions[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
+
+    // 📅 Date Filter (DATE only, not time)
+    const dateFilters = [];
+
+    if (dateFrom && dateTo) {
+      dateFilters.push(
+        where(fn("DATE", col("date")), {
+          [Op.between]: [dateFrom, dateTo],
+        })
+      );
+    } else if (dateFrom) {
+      dateFilters.push(
+        where(fn("DATE", col("date")), {
+          [Op.gte]: dateFrom,
+        })
+      );
+    } else if (dateTo) {
+      dateFilters.push(
+        where(fn("DATE", col("date")), {
+          [Op.lte]: dateTo,
+        })
+      );
+    }
+
+    if (dateFilters.length > 0) {
+      whereConditions[Op.and] = [...(whereConditions[Op.and] || []), ...dateFilters];
+    }
+
+    // 📂 Category Name Filter
+    const categoryWhere = categoryName
+      ? { name: { [Op.like]: `%${categoryName}%` } }
+      : {};
+
     const { count, rows: events } = await Events.findAndCountAll({
-      where: { status: 1 },
+      where: whereConditions,
       limit,
       offset,
       order: [["createdAt", "DESC"]],
@@ -1255,6 +1299,7 @@ exports.getAllEvents = async (req, res) => {
           model: EventsCategory,
           as: "category",
           attributes: ["id", "name"],
+          where: categoryWhere,
         },
         {
           model: User,
@@ -1264,18 +1309,16 @@ exports.getAllEvents = async (req, res) => {
       ],
     });
 
-    // Add full URL to featured_image and files
-    const updatedEvents = events.map((event) => {
-      return {
-        ...event.toJSON(),
-        featured_image: event.featured_image
-          ? baseUrl + event.featured_image
-          : null,
-        files: event.files
-          ? event.files.split(",").map((filename) => baseUrl + filename)
-          : [],
-      };
-    });
+    // 🖼️ Process image URLs
+    const updatedEvents = events.map((event) => ({
+      ...event.toJSON(),
+      featured_image: event.featured_image
+        ? baseUrl + event.featured_image
+        : null,
+      files: event.files
+        ? event.files.split(",").map((filename) => baseUrl + filename)
+        : [],
+    }));
 
     return res.status(200).json({
       success: updatedEvents.length > 0,
@@ -1295,7 +1338,6 @@ exports.getAllEvents = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 exports.getEventById = async (req, res) => {
   try {
     const { id } = req.params;

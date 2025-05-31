@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       files:DataTypes.STRING,
       link: DataTypes.TEXT,
       category_id: DataTypes.INTEGER,
+      address:DataTypes.STRING,
       date: DataTypes.DATE,
       time:DataTypes.TIME,
       organizor:DataTypes.TEXT,

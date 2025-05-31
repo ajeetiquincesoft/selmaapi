@@ -44,6 +44,10 @@ module.exports = {
         type: Sequelize.INTEGER,
         references: { model: 'EventsCategory', key: 'id' }
       },
+        address: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
       date: {
         type: Sequelize.DATE,
         allowNull: true
