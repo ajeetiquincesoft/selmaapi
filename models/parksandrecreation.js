@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const ParksAndRecreation = sequelize.define('ParksAndRecreation', {
+  const ParksAndRecreation = sequelize.define('parksandrecreation', {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
@@ -79,7 +79,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW
     }
   }, {
-    tableName: 'ParksAndRecreation',
+    tableName: 'parksandrecreation',
     timestamps: true
   });
 

@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const Events = sequelize.define('Events', {
+    const Events = sequelize.define('events', {
       userId: DataTypes.INTEGER,
       title: DataTypes.STRING,
       description: DataTypes.TEXT,
@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       published_at: DataTypes.DATE
     }, {
-      tableName: 'Events',
+      tableName: 'events',
     //   underscored: true
     });
   

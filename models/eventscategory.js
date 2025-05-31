@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const EventsCategory = sequelize.define('EventsCategory', {
+    const EventsCategory = sequelize.define('eventscategory', {
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false
@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 1
       }
     }, {
-      tableName: 'EventsCategory',
+      tableName: 'eventscategory',
       timestamps: true
     });
   

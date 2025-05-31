@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const UserMeta = sequelize.define("UserMeta", {
+  const UserMeta = sequelize.define("usermeta", {
     address: DataTypes.STRING,
     profile_pic: DataTypes.STRING,
     gender: DataTypes.STRING,

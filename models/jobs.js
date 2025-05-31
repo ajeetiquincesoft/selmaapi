@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const Job = sequelize.define('Jobs', {
+    const Job = sequelize.define('jobs', {
       userId: DataTypes.INTEGER,
       title: DataTypes.STRING,
       description: DataTypes.TEXT,
@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       published_at: DataTypes.DATE
     }, {
-      tableName: 'Jobs',
+      tableName: 'jobs',
     //   underscored: true
     });
   

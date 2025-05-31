@@ -10,7 +10,7 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-       await queryInterface.createTable('Pages', {
+       await queryInterface.createTable('pages', {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
       userId: {
         type: Sequelize.INTEGER,

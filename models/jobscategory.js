@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const JobsCategory = sequelize.define('JobsCategory', {
+    const JobsCategory = sequelize.define('jobscategory', {
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false
@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 1
       }
     }, {
-      tableName: 'JobsCategory',
+      tableName: 'jobscategory',
       timestamps: true
     });
   

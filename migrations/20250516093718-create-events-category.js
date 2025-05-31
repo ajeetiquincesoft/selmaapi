@@ -10,7 +10,7 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-    await queryInterface.createTable('EventsCategory', {
+    await queryInterface.createTable('eventscategory', {
       
       id: {
         type: Sequelize.INTEGER,
@@ -38,6 +38,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.dropTable('EventsCategory');
+    await queryInterface.dropTable('eventscategory');
   }
 };

@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const PagesCategory = sequelize.define('PagesCategory', {
+  const PagesCategory = sequelize.define('pagescategory', {
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false
@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 1
     },
   }, {
-    tableName: 'PagesCategory',
+    tableName: 'pagescategory',
     timestamps: true // remove if you have `createdAt` and `updatedAt`
   });
 

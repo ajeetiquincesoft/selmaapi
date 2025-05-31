@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const NewsCategory = sequelize.define('NewsCategory', {
+  const NewsCategory = sequelize.define('newscategory', {
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false
