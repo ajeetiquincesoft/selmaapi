@@ -7,7 +7,7 @@ module.exports = {
        id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
        userId: {
         type: Sequelize.INTEGER,
-        references: { model: 'Users', key: 'id' }
+        references: { model: 'users', key: 'id' }
       },
       address: {
         type: Sequelize.STRING,
