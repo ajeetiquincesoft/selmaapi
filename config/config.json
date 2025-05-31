@@ -3,7 +3,7 @@
     "username": "deviqdts_selmaapi",
     "password": "$Admin@112",
     "database": "deviqdts_selmaapi",
-    "host": "ec2-34-213-214-55.us-west-2.compute.amazonaws.com",
+    "host": "162.241.85.136",
     "dialect": "mysql"
   },
   "test": {
