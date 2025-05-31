@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "root",
-    "password": null,
-    "database": "selmaapi",
-    "host": "127.0.0.1",
+    "username": "deviqdts_selmaapi",
+    "password": "$Admin@112",
+    "database": "deviqdts_selmaapi",
+    "host": "162.241.85.136",
     "dialect": "mysql"
   },
   "test": {
