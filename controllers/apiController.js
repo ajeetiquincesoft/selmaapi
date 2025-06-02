@@ -136,38 +136,46 @@ exports.updateAuthUser = async (req, res) => {
 
     // 2. Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.data.id; // Make sure your token payload contains "data.id"
+    const userId = decoded.data.id; // Assuming token payload has "data.id"
 
-    // 3. Destructure query params (or use req.body if it's a POST request)
+    // 3. Extract body params
     const { name, address, phone, gender } = req.body;
-// console.log(name);
+
     if (!name || !address || !phone || !gender) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // 4. Find and update user
+    // 4. Find user and meta using correct alias
     const user = await db.User.findOne({
       where: { id: userId },
-      include: db.UserMeta,
+      include: {
+        model: db.UserMeta,
+        as: 'meta',
+      },
     });
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // 5. Update User fields
     user.name = name;
-    // user.email = email;
     user.phone = phone;
     await user.save();
 
-    const userMeta = await db.UserMeta.findOne({ where: { userId } });
-    if (userMeta) {
-      userMeta.address = address;
-      // userMeta.profile_pic = profile_pic;
-      userMeta.gender = gender;
-      await userMeta.save();
+    // 6. Update UserMeta fields via alias
+    if (user.meta) {
+      user.meta.address = address;
+      user.meta.gender = gender;
+      await user.meta.save();
     }
 
-    return res.status(200).json({ message: "User updated successfully", user });
+    // 7. Respond with updated user
+    return res.status(200).json({
+      message: "User updated successfully",
+      user,
+    });
+
   } catch (err) {
     console.error("Error updating user:", err);
     if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
