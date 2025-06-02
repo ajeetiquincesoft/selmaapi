@@ -105,16 +105,21 @@ exports.getauthuser = async (req, res) => {
 
     // Verify and decode the token
     const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.data.id; // Ensure your token payload has this structure
+    const userId = decoded.data.id;
 
-    // Find user with UserMeta
+    // Find user with meta info
     const user = await db.User.findOne({
       where: { id: userId },
-      include: "meta",
+      include: [{ model: db.UserMeta, as: "meta" }],
     });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Add full URL to profile_pic if available
+    if (user.meta && user.meta.profile_pic) {
+      user.meta.profile_pic = `${process.env.BASE_URL}/uploads/${user.meta.profile_pic}`;
     }
 
     res.status(200).json(user);
