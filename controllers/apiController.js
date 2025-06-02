@@ -97,17 +97,14 @@ exports.login = async (req, res) => {
 };
 exports.getauthuser = async (req, res) => {
   try {
-    // Extract token from Authorization header
-    const token = req.headers.authorization?.split(" ")[1]; // Format: "Bearer <token>"
+    const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    // Verify and decode the token
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.data.id;
 
-    // Find user with meta info
     const user = await db.User.findOne({
       where: { id: userId },
       include: [{ model: db.UserMeta, as: "meta" }],
@@ -117,9 +114,10 @@ exports.getauthuser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Add full URL to profile_pic if available
-    if (user.meta && user.meta.profile_pic) {
-      user.meta.profile_pic = `${process.env.BASE_URL}/uploads/${user.meta.profile_pic}`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+
+    if (user.meta?.profile_pic) {
+      user.meta.profile_pic = baseUrl + user.meta.profile_pic;
     }
 
     res.status(200).json(user);
