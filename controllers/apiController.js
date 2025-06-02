@@ -315,24 +315,28 @@ exports.forgotPassword = async (req, res) => {
 exports.uploadProfilePic = async (req, res) => {
   const userId = req.user.userId;
 
-  // Check if a file was uploaded
-  if (!req.file) {
+  // Get uploaded file from `profile_pic` field
+  const uploadedFile =
+    req.files && req.files["profile_pic"] ? req.files["profile_pic"][0] : null;
+
+  if (!uploadedFile) {
     return res.status(400).json({ message: "No image file uploaded" });
   }
 
   try {
-    const user = await db.UserMeta.findOne({ where: { userId: userId } });
+    const user = await db.UserMeta.findOne({ where: { userId } });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.profile_pic = req.file.filename; // Save filename to DB
+    // Save filename to DB
+    user.profile_pic = uploadedFile.filename;
     await user.save();
 
     res.json({
       message: "Profile picture uploaded successfully",
-      profile_pic: req.file.filename,
+      profile_pic: uploadedFile.filename,
     });
   } catch (err) {
     console.error(err);
@@ -342,6 +346,7 @@ exports.uploadProfilePic = async (req, res) => {
     });
   }
 };
+
 exports.addnewscategory = async (req, res) => {
   const { userId, name } = req.body;
 
