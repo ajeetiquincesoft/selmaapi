@@ -139,10 +139,9 @@ exports.updateAuthUser = async (req, res) => {
     const userId = decoded.data.id; // Make sure your token payload contains "data.id"
 
     // 3. Destructure query params (or use req.body if it's a POST request)
-    const { name, role, email, profile_pic, address, phone, gender } =
-      req.query;
-
-    if (!name || !email || !address || !phone || !gender) {
+    const { name, address, phone, gender } = req.body;
+// console.log(name);
+    if (!name || !address || !phone || !gender) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
@@ -156,14 +155,14 @@ exports.updateAuthUser = async (req, res) => {
     }
 
     user.name = name;
-    user.email = email;
+    // user.email = email;
     user.phone = phone;
     await user.save();
 
     const userMeta = await db.UserMeta.findOne({ where: { userId } });
     if (userMeta) {
       userMeta.address = address;
-      userMeta.profile_pic = profile_pic;
+      // userMeta.profile_pic = profile_pic;
       userMeta.gender = gender;
       await userMeta.save();
     }
@@ -270,40 +269,71 @@ exports.forgotPassword = async (req, res) => {
       .json({ message: "Something went wrong", error: err.message });
   }
 };
+// exports.uploadProfilePic = async (req, res) => {
+//   const userId = req.user.userId;
+//   const { profile_pic } = req.body;
+//   if (!profile_pic) {
+//     return res.status(400).json({ message: "No image data provided" });
+//   }
+//   try {
+//     const user = await db.UserMeta.findOne({ where: { userId: userId } });
+//     const matches = profile_pic.match(/^data:image\/(\w+);base64,(.+)$/);
+//     if (!matches || matches.length !== 3) {
+//       return res.status(400).json({ message: "Invalid image format" });
+//     }
+//     let ext = matches[1].toLowerCase();
+//     const base64Data = matches[2];
+//     if (ext === "jpeg") ext = "jpg";
+//     const fileName = `image_Profile${Date.now()}.${ext}`;
+//     const filePath = path.join(__dirname, "../images", fileName);
+//     fs.writeFileSync(filePath, base64Data, "base64");
+//     user.profile_pic = fileName;
+//     await user.save();
+//     res.json({
+//       message: "Profile picture uploaded successfully",
+//       profile_pic: fileName,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res
+//       .status(500)
+//       .json({ message: "Failed to upload image", error: err.message });
+//   }
+
+//   res.json({ user });
+// };
+
+
 exports.uploadProfilePic = async (req, res) => {
   const userId = req.user.userId;
-  const { profile_pic } = req.body;
-  if (!profile_pic) {
-    return res.status(400).json({ message: "No image data provided" });
+
+  // Check if a file was uploaded
+  if (!req.file) {
+    return res.status(400).json({ message: "No image file uploaded" });
   }
+
   try {
     const user = await db.UserMeta.findOne({ where: { userId: userId } });
-    const matches = profile_pic.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return res.status(400).json({ message: "Invalid image format" });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    let ext = matches[1].toLowerCase();
-    const base64Data = matches[2];
-    if (ext === "jpeg") ext = "jpg";
-    const fileName = `image_Profile${Date.now()}.${ext}`;
-    const filePath = path.join(__dirname, "../images", fileName);
-    fs.writeFileSync(filePath, base64Data, "base64");
-    user.profile_pic = fileName;
+
+    user.profile_pic = req.file.filename; // Save filename to DB
     await user.save();
+
     res.json({
       message: "Profile picture uploaded successfully",
-      profile_pic: fileName,
+      profile_pic: req.file.filename,
     });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ message: "Failed to upload image", error: err.message });
+    res.status(500).json({
+      message: "Failed to upload image",
+      error: err.message,
+    });
   }
-
-  res.json({ user });
 };
-
 exports.addnewscategory = async (req, res) => {
   const { userId, name } = req.body;
 
@@ -688,7 +718,7 @@ exports.getAllJobsCategories = async (req, res) => {
             // Count only jobs with status: 1
             sequelize.literal(`(
               SELECT COUNT(*)
-              FROM Jobs AS job
+              FROM jobs AS job
               WHERE job.category_id = JobsCategory.id AND job.status = 1
             )`),
             "totalopenings",

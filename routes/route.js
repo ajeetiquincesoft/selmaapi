@@ -15,7 +15,12 @@ router.post("/auth/updateAuthUser", verifyToken, apiController.updateAuthUser);
 router.post("/auth/updatePassword", verifyToken, apiController.updatePassword);
 router.post(
   "/auth/uploadProfilePic",
-  verifyToken,
+   [
+    verifyToken, // Auth middleware
+    upload.fields([
+      { name: "profile_pic", maxCount: 1 }
+    ]),
+  ],
   apiController.uploadProfilePic
 );
 router.post(
