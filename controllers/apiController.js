@@ -313,24 +313,32 @@ exports.forgotPassword = async (req, res) => {
 
 
 exports.uploadProfilePic = async (req, res) => {
-  const userId = req.user.userId;
-
-  // Get uploaded file from `profile_pic` field
-  const uploadedFile =
-    req.files && req.files["profile_pic"] ? req.files["profile_pic"][0] : null;
-
-  if (!uploadedFile) {
-    return res.status(400).json({ message: "No image file uploaded" });
-  }
-
   try {
-    const user = await db.UserMeta.findOne({ where: { userId } });
+    // 1. Extract and verify token
+    const token = req.headers.authorization?.split(" ")[1]; // "Bearer <token>"
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
 
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id || decoded.userId || decoded.id; // adjust based on your payload structure
+
+    // 2. Get uploaded file from `profile_pic` field
+    const uploadedFile =
+      req.files && req.files["profile_pic"]
+        ? req.files["profile_pic"][0]
+        : null;
+
+    if (!uploadedFile) {
+      return res.status(400).json({ message: "No image file uploaded" });
+    }
+
+    // 3. Find and update the user
+    const user = await db.UserMeta.findOne({ where: { userId } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Save filename to DB
     user.profile_pic = uploadedFile.filename;
     await user.save();
 
@@ -339,7 +347,10 @@ exports.uploadProfilePic = async (req, res) => {
       profile_pic: uploadedFile.filename,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Upload error:", err);
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     res.status(500).json({
       message: "Failed to upload image",
       error: err.message,
