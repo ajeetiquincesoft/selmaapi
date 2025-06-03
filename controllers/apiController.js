@@ -362,21 +362,35 @@ exports.uploadProfilePic = async (req, res) => {
 };
 
 exports.addnewscategory = async (req, res) => {
-  const { userId, name } = req.body;
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ message: "Category name is required" });
-  }
-
   try {
+    // 1. Get token from header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // 2. Decode token and get userId
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 3. Get name from body
+    const { name } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // 4. Create category
     const category = await NewsCategory.create({ userId, name });
-    console.log(category);
+
     res.status(201).json({
       message: "News category created successfully",
       data: category,
     });
   } catch (error) {
     console.error("Error creating category:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     res.status(500).json({ message: "Internal server error" });
   }
 };
