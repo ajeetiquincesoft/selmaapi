@@ -736,21 +736,39 @@ exports.deleteNews = async (req, res) => {
 };
 
 exports.addJobsCategory = async (req, res) => {
-  const { userId, name } = req.body;
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ message: "Job category name is required" });
-  }
-
   try {
+    // 1. Extract and verify token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // Ensure your JWT contains this
+
+    // 2. Extract category name
+    const { name } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res
+        .status(400)
+        .json({ message: "Job category name is required" });
+    }
+
+    // 3. Create category
     const category = await JobsCategory.create({ userId, name });
-    console.log(category);
+
     res.status(201).json({
       message: "Job category created successfully",
       data: category,
     });
   } catch (error) {
     console.error("Error creating job category:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -837,8 +855,17 @@ exports.deleteJobsCategory = async (req, res) => {
 };
 exports.addJob = async (req, res) => {
   try {
+    // 1. Extract and verify token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // Token में { data: { id: ... } } होना चाहिए
+
+    // 2. Destructure other job fields
     const {
-      userId,
       title,
       description,
       shortdescription,
@@ -849,8 +876,10 @@ exports.addJob = async (req, res) => {
       published_at,
     } = req.body;
 
+    // 3. Handle featured image
     const featured_image = req.file ? req.file.filename : null;
 
+    // 4. Create job entry
     const job = await Jobs.create({
       userId,
       title,
@@ -870,6 +899,11 @@ exports.addJob = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding job:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1107,21 +1141,37 @@ exports.deleteJob = async (req, res) => {
 };
 
 exports.addEventsCategory = async (req, res) => {
-  const { userId, name } = req.body;
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ message: "Event category name is required" });
-  }
-
   try {
+    // 1. Extract and verify token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // Ensure your token payload is structured as: { data: { id: userId } }
+
+    // 2. Validate input
+    const { name } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Event category name is required" });
+    }
+
+    // 3. Create category
     const category = await EventsCategory.create({ userId, name });
-    console.log(category);
+
+    // 4. Return response
     res.status(201).json({
       message: "Event category created successfully",
       data: category,
     });
   } catch (error) {
     console.error("Error creating event category:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1186,8 +1236,17 @@ exports.getAllEventsCategories = async (req, res) => {
 
 exports.addEvent = async (req, res) => {
   try {
+    // 1. Extract user ID from token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Extract fields from request body
     const {
-      userId,
       title,
       description,
       shortdescription,
@@ -1200,21 +1259,16 @@ exports.addEvent = async (req, res) => {
       published_at,
     } = req.body;
 
-    // Get uploaded files
-    const featuredImageFile = req.files["featured_image"]
-      ? req.files["featured_image"][0]
-      : null;
-    const filesUploads = req.files["files"] || [];
+    // 3. Handle uploaded files
+    const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
+    const filesUploads = req.files?.["files"] || [];
 
-    const featured_image = featuredImageFile
-      ? featuredImageFile.filename
+    const featured_image = featuredImageFile ? featuredImageFile.filename : null;
+    const files = filesUploads.length > 0
+      ? filesUploads.map((file) => file.filename).join(",")
       : null;
-    const files =
-      filesUploads.length > 0
-        ? filesUploads.map((file) => file.filename).join(",")
-        : null;
 
-    // Create the event record
+    // 4. Create the event
     const event = await Events.create({
       userId,
       title,
@@ -1231,15 +1285,22 @@ exports.addEvent = async (req, res) => {
       published_at,
     });
 
+    // 5. Respond
     return res.status(201).json({
       message: "Event added successfully",
       data: event,
     });
   } catch (error) {
     console.error("Error adding event:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.updateEvent = async (req, res) => {
   try {
@@ -1466,14 +1527,23 @@ exports.getEventById = async (req, res) => {
 
 exports.addParksAndRecreationContent = async (req, res) => {
   try {
-    const { userId, mission, vision, address, hours, contacts, status } =
-      req.body;
+    // 1. Extract token and get userId
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
 
-    // Get uploaded image file
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Get body data
+    const { mission, vision, address, hours, contacts, status } = req.body;
+
+    // 3. Get uploaded image file
     const imageFile = req.files?.["image"]?.[0] || null;
     const image = imageFile ? imageFile.filename : null;
 
-    // Create the record
+    // 4. Create the record
     const record = await ParksAndRecreationContent.create({
       userId,
       image,
@@ -1485,12 +1555,18 @@ exports.addParksAndRecreationContent = async (req, res) => {
       status,
     });
 
+    // 5. Send response
     return res.status(201).json({
       message: "Parks and Recreation content added successfully",
       data: record,
     });
   } catch (error) {
     console.error("Error adding Parks and Recreation content:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1605,17 +1681,28 @@ exports.getParksAndRecreationContent = async (req, res) => {
 };
 
 exports.addParksAndRecreationCategory = async (req, res) => {
-  const { userId, name, parentId, status } = req.body;
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ message: "Category name is required" });
-  }
-
   try {
-    // Handle optional image upload
+    // 1. Extract token and get userId
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Extract category data
+    const { name, parentId, status } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // 3. Handle optional image upload
     const imageFile = req.files?.["image"]?.[0] || null;
     const image = imageFile ? imageFile.filename : null;
 
+    // 4. Create the category
     const category = await ParksAndRecreationCategory.create({
       userId,
       name,
@@ -1624,12 +1711,19 @@ exports.addParksAndRecreationCategory = async (req, res) => {
       status: status || 1,
     });
 
+    // 5. Send success response
     res.status(201).json({
       message: "Parks and Recreation category created successfully",
       data: category,
     });
+
   } catch (error) {
     console.error("Error creating category:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1770,8 +1864,17 @@ exports.getParksAndRecreationCategoryById = async (req, res) => {
 
 exports.addParksAndRecreation = async (req, res) => {
   try {
+    // 1. Extract userId from token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Extract data from request body
     const {
-      userId,
       category_id,
       title,
       description,
@@ -1785,7 +1888,7 @@ exports.addParksAndRecreation = async (req, res) => {
       published_at,
     } = req.body;
 
-    // File handling
+    // 3. Handle file uploads
     const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
     const additionalImages = req.files?.["images"] || [];
 
@@ -1797,7 +1900,7 @@ exports.addParksAndRecreation = async (req, res) => {
         ? additionalImages.map((file) => file.filename).join(",")
         : null;
 
-    // Create the ParksAndRecreation record
+    // 4. Create the ParksAndRecreation record
     const record = await ParksAndRecreation.create({
       userId,
       category_id,
@@ -1815,12 +1918,19 @@ exports.addParksAndRecreation = async (req, res) => {
       published_at,
     });
 
+    // 5. Respond with success
     return res.status(201).json({
       message: "Parks and Recreation content created successfully",
       data: record,
     });
+
   } catch (error) {
     console.error("Error adding Parks and Recreation content:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -2011,23 +2121,31 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
 // };
 exports.addRecyclingAndGarbageContent = async (req, res) => {
   try {
-    const { userId, description, shortdescription, status } = req.body;
+    // 1. Extract userId from token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
 
-    // Get uploaded image file
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Extract other fields from request body
+    const { description, shortdescription, status } = req.body;
+
+    // 3. Get uploaded image file
     const imageFile = req.files?.["image"]?.[0] || null;
     const image = imageFile ? imageFile.filename : null;
 
-    // Check if a record already exists
+    // 4. Check if a record already exists
     const existingRecord = await RecyclingAndGarbageContent.findOne();
 
     if (existingRecord) {
-      // Update the existing record
-      existingRecord.userId = userId || existingRecord.userId;
+      // Update existing record
+      existingRecord.userId = userId;
       existingRecord.description = description || existingRecord.description;
-      existingRecord.shortdescription =
-        shortdescription || existingRecord.shortdescription;
-      existingRecord.status =
-        typeof status !== "undefined" ? status : existingRecord.status;
+      existingRecord.shortdescription = shortdescription || existingRecord.shortdescription;
+      existingRecord.status = typeof status !== "undefined" ? status : existingRecord.status;
       if (image) existingRecord.image = image;
 
       await existingRecord.save();
@@ -2037,7 +2155,7 @@ exports.addRecyclingAndGarbageContent = async (req, res) => {
         data: existingRecord,
       });
     } else {
-      // Create a new record
+      // Create new record
       const newRecord = await RecyclingAndGarbageContent.create({
         userId,
         image,
@@ -2052,42 +2170,53 @@ exports.addRecyclingAndGarbageContent = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(
-      "Error adding/updating Recycling and Garbage content:",
-      error
-    );
+    console.error("Error adding/updating Recycling and Garbage content:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 exports.updateRecyclingAndGarbageContent = async (req, res) => {
   try {
+    // 1. Extract userId from token
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    // 2. Extract other fields from request body
     const {
       id, // ID of the record to update
-      userId,
       description,
       shortdescription,
       status,
     } = req.body;
 
-    // Find the existing record
+    // 3. Find the existing record
     const record = await RecyclingAndGarbageContent.findByPk(id);
     if (!record) {
       return res.status(404).json({ message: "Content not found" });
     }
 
-    // Handle uploaded image if any
+    // 4. Handle uploaded image if any
     const imageFile = req.files?.["image"]?.[0] || null;
     const image = imageFile ? imageFile.filename : null;
 
-    // Update fields if provided
-    if (userId) record.userId = userId;
+    // 5. Update fields
+    record.userId = userId;
     if (description) record.description = description;
     if (shortdescription) record.shortdescription = shortdescription;
     if (typeof status !== "undefined") record.status = status;
     if (image) record.image = image;
 
-    // Save changes
+    // 6. Save changes
     await record.save();
 
     return res.status(200).json({
@@ -2096,6 +2225,11 @@ exports.updateRecyclingAndGarbageContent = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating Recycling and Garbage content:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -2150,7 +2284,17 @@ exports.getRecyclingAndGarbageContent = async (req, res) => {
 
 exports.addRecyclingAndGarbage = async (req, res) => {
   try {
-    const { userId, title, description, shortdescription, status } = req.body;
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    const { title, description, shortdescription, status } = req.body;
 
     // File handling
     const imageFile = req.files?.["image"]?.[0] || null;
@@ -2172,14 +2316,26 @@ exports.addRecyclingAndGarbage = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding Recycling and Garbage content:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 exports.updateRecyclingAndGarbage = async (req, res) => {
   try {
-    const { id, userId, title, description, shortdescription, status } =
-      req.body;
+    const { id, title, description, shortdescription, status } = req.body;
+
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userIdFromToken = decoded.data.id;
 
     const record = await RecyclingAndGarbage.findByPk(id);
     if (!record) {
@@ -2189,7 +2345,8 @@ exports.updateRecyclingAndGarbage = async (req, res) => {
     const imageFile = req.files?.["image"]?.[0] || null;
     const image = imageFile ? imageFile.filename : record.image;
 
-    record.userId = userId || record.userId;
+    // Update fields, use userId from token
+    record.userId = userIdFromToken || record.userId;
     record.title = title || record.title;
     record.description = description || record.description;
     record.shortdescription = shortdescription || record.shortdescription;
@@ -2204,6 +2361,9 @@ exports.updateRecyclingAndGarbage = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating Recycling and Garbage content:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -2278,13 +2438,23 @@ exports.getRecyclingAndGarbageById = async (req, res) => {
 };
 
 exports.addPagesCategory = async (req, res) => {
-  const { userId, name } = req.body;
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ message: "Category name is required" });
-  }
-
   try {
+    const { name } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode token to get userId
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
     const category = await PagesCategory.create({ userId, name });
     console.log(category);
     res.status(201).json({
@@ -2293,6 +2463,9 @@ exports.addPagesCategory = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating pages category:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -2359,8 +2532,17 @@ exports.getAllPagesCategories = async (req, res) => {
 
 exports.addPages = async (req, res) => {
   try {
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
     const {
-      userId,
       title,
       description,
       shortdescription,
@@ -2375,22 +2557,15 @@ exports.addPages = async (req, res) => {
     } = req.body;
 
     // Get uploaded files
-    const featuredImageFile = req.files["featured_image"]
-      ? req.files["featured_image"][0]
-      : null;
-    const imagesFiles = req.files["images"] || [];
+    const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
+    const imagesFiles = req.files?.["images"] || [];
 
     // Prepare fields to save
-    const featured_image = featuredImageFile
-      ? featuredImageFile.filename
-      : null;
-    const images =
-      imagesFiles.length > 0
-        ? imagesFiles.map((file) => file.filename).join(",")
-        : null;
+    const featured_image = featuredImageFile ? featuredImageFile.filename : null;
+    const images = imagesFiles.length > 0 ? imagesFiles.map(file => file.filename).join(",") : null;
 
-    // Create the news record
-    const news = await Pages.create({
+    // Create the Pages record
+    const page = await Pages.create({
       userId,
       title,
       description,
@@ -2408,20 +2583,32 @@ exports.addPages = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: "page added successfully",
-      data: news,
+      message: "Page added successfully",
+      data: page,
     });
   } catch (error) {
-    console.error("Error adding news:", error);
+    console.error("Error adding page:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 exports.updatePages = async (req, res) => {
   try {
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify and decode token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userIdFromToken = decoded.data.id;
+
     const {
       id, // ID of the page to update
-      userId,
       title,
       description,
       shortdescription,
@@ -2437,16 +2624,18 @@ exports.updatePages = async (req, res) => {
 
     // Find existing record
     const page = await Pages.findByPk(id);
-
     if (!page) {
       return res.status(404).json({ message: "Page not found" });
     }
+
+    // Optional: you can verify if userIdFromToken matches page.userId here for authorization
 
     // Handle uploaded files
     const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
     const imagesFiles = req.files?.["images"] || [];
 
-    if (userId) page.userId = userId;
+    // Update fields only if provided
+    page.userId = userIdFromToken; // always update userId from token
     if (title) page.title = title;
     if (description) page.description = description;
     if (shortdescription) page.shortdescription = shortdescription;
@@ -2472,6 +2661,9 @@ exports.updatePages = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating page:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 };
