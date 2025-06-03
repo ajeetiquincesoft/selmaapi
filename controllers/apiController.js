@@ -458,8 +458,16 @@ exports.deletenewsCategory = async (req, res) => {
 
 exports.addNews = async (req, res) => {
   try {
+    // Extract token and get userId
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id; // adjust based on your token payload
+
     const {
-      userId,
       title,
       description,
       shortdescription,
@@ -469,15 +477,17 @@ exports.addNews = async (req, res) => {
     } = req.body;
 
     // Get uploaded files
-    const featuredImageFile = req.files["featured_image"]
+    const featuredImageFile = req.files?.["featured_image"]
       ? req.files["featured_image"][0]
       : null;
-    const imagesFiles = req.files["images"] || [];
+
+    const imagesFiles = req.files?.["images"] || [];
 
     // Prepare fields to save
     const featured_image = featuredImageFile
       ? featuredImageFile.filename
       : null;
+
     const images =
       imagesFiles.length > 0
         ? imagesFiles.map((file) => file.filename).join(",")
@@ -502,6 +512,11 @@ exports.addNews = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding news:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
     return res.status(500).json({ message: "Internal server error" });
   }
 };
