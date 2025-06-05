@@ -59,6 +59,7 @@ router.post(
   apiController.updateNews
 );
 router.post("/auth/deletenews", verifyToken, apiController.deleteNews);
+router.get("/auth/getallnewslist", apiController.getAllNewsList);
 router.get("/auth/getallnews", apiController.getAllNews);
 router.get("/auth/getNewsById/:id", apiController.getNewsById);
 
