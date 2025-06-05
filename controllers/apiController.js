@@ -596,7 +596,7 @@ exports.getNewsById = async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
     const news = await News.findOne({
-      where: { id: newsId, status: 1 },
+      where: { id: newsId },
       include: [
         {
           model: NewsCategory,
