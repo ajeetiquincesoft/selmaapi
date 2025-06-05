@@ -527,11 +527,12 @@ exports.getAllNews = async (req, res) => {
     const limit = parseInt(req.query.limit) || 4;
     const offset = (page - 1) * limit;
     const keyword = req.query.keyword || "";
+    const status = typeof req.query.status !== "undefined" ? req.query.status : 1;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
     const whereCondition = {
-      status: 1,
+      ...(status !== "all" && { status }), // Only apply status filter if not "all"
       [Op.or]: [
         { title: { [Op.like]: `%${keyword}%` } },
         { shortdescription: { [Op.like]: `%${keyword}%` } },
@@ -539,8 +540,10 @@ exports.getAllNews = async (req, res) => {
       ],
     };
 
+    const finalWhere = keyword || status !== "all" ? whereCondition : {};
+
     const { count, rows: news } = await News.findAndCountAll({
-      where: keyword ? whereCondition : { status: 1 },
+      where: finalWhere,
       limit,
       offset,
       order: [["createdAt", "DESC"]],
@@ -558,23 +561,17 @@ exports.getAllNews = async (req, res) => {
       ],
     });
 
-    // Add full image path
-    const updatedNews = news.map((item) => {
-      return {
-        ...item.toJSON(),
-        featured_image: item.featured_image
-          ? baseUrl + item.featured_image
-          : null,
-        images: item.images
-          ? item.images.split(",").map((filename) => baseUrl + filename)
-          : [],
-      };
-    });
+    const updatedNews = news.map((item) => ({
+      ...item.toJSON(),
+      featured_image: item.featured_image ? baseUrl + item.featured_image : null,
+      images: item.images
+        ? item.images.split(",").map((filename) => baseUrl + filename)
+        : [],
+    }));
 
     return res.status(200).json({
       success: updatedNews.length > 0,
-      message:
-        updatedNews.length > 0 ? "News fetched successfully" : "No news found",
+      message: updatedNews.length > 0 ? "News fetched successfully" : "No news found",
       data: updatedNews,
       pagination: {
         total: count,
@@ -589,72 +586,8 @@ exports.getAllNews = async (req, res) => {
 };
 
 
-exports.getAllNewsList = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 4;
-    const offset = (page - 1) * limit;
-    const keyword = req.query.keyword || "";
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
-    const whereCondition = {
-      status: 1,
-      [Op.or]: [
-        { title: { [Op.like]: `%${keyword}%` } },
-        { shortdescription: { [Op.like]: `%${keyword}%` } },
-        { description: { [Op.like]: `%${keyword}%` } },
-      ],
-    };
-
-    const { count, rows: news } = await News.findAndCountAll({
-      where: keyword ? whereCondition : { status: 1 },
-      limit,
-      offset,
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: NewsCategory,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: User,
-          as: "author",
-          attributes: ["id", "name", "email"],
-        },
-      ],
-    });
-
-    // Add full image path
-    const updatedNews = news.map((item) => {
-      return {
-        ...item.toJSON(),
-        featured_image: item.featured_image
-          ? baseUrl + item.featured_image
-          : null,
-        images: item.images
-          ? item.images.split(",").map((filename) => baseUrl + filename)
-          : [],
-      };
-    });
-
-    return res.status(200).json({
-      success: updatedNews.length > 0,
-      message:
-        updatedNews.length > 0 ? "News fetched successfully" : "No news found",
-      data: updatedNews,
-      pagination: {
-        total: count,
-        page,
-        totalPages: Math.ceil(count / limit),
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching news:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
 
 exports.getNewsById = async (req, res) => {
   try {
@@ -663,7 +596,7 @@ exports.getNewsById = async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
     const news = await News.findOne({
-      where: { id: newsId},
+      where: { id: newsId, status: 1 },
       include: [
         {
           model: NewsCategory,
