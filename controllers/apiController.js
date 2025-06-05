@@ -397,9 +397,7 @@ exports.addnewscategory = async (req, res) => {
 
 exports.getAllNewsCategories = async (req, res) => {
   try {
-    const categories = await NewsCategory.findAll({
-      where: { status: 1 },
-    });
+    const categories = await NewsCategory.findAll();
 
     res.status(200).json({
       message: "Active categories fetched successfully",
@@ -777,7 +775,6 @@ exports.addJobsCategory = async (req, res) => {
 exports.getAllJobsCategories = async (req, res) => {
   try {
     const categories = await JobsCategory.findAll({
-      where: { status: 1 },
       include: [
         {
           model: Jobs,
@@ -973,10 +970,13 @@ exports.getAllJobs = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10; // Default 10 items per page
     const offset = (page - 1) * limit;
 
+    const status = req.query.status !== undefined ? req.query.status : 1; // Default to 1
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
+    const whereClause = status === "all" ? {} : { status };
+
     const { count, rows: jobs } = await Jobs.findAndCountAll({
-      where: { status: 1 },
+      where: whereClause,
       limit,
       offset,
       order: [["published_at", "DESC"]],
@@ -994,15 +994,12 @@ exports.getAllJobs = async (req, res) => {
       ],
     });
 
-    // Add full image path to featured_image
-    const updatedJobs = jobs.map((job) => {
-      return {
-        ...job.toJSON(),
-        featured_image: job.featured_image
-          ? baseUrl + job.featured_image
-          : null,
-      };
-    });
+    const updatedJobs = jobs.map((job) => ({
+      ...job.toJSON(),
+      featured_image: job.featured_image
+        ? baseUrl + job.featured_image
+        : null,
+    }));
 
     return res.status(200).json({
       success: updatedJobs.length > 0,
@@ -1021,6 +1018,7 @@ exports.getAllJobs = async (req, res) => {
   }
 };
 
+
 exports.getJobsByCategoryId = async (req, res) => {
   try {
     const categoryId = parseInt(req.params.categoryId);
@@ -1033,7 +1031,6 @@ exports.getJobsByCategoryId = async (req, res) => {
 
     const { count, rows: jobs } = await Jobs.findAndCountAll({
       where: {
-        status: 1,
         category_id: categoryId,
         [Op.or]: [
           { title: { [Op.like]: `%${keyword}%` } },
@@ -1088,7 +1085,7 @@ exports.getJobById = async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
     const job = await Jobs.findOne({
-      where: { id, status: 1 },
+      where: { id },
       include: [
         {
           model: JobsCategory,
@@ -1221,9 +1218,7 @@ exports.deleteEventsCategory = async (req, res) => {
 };
 exports.getAllEventsCategories = async (req, res) => {
   try {
-    const categories = await EventsCategory.findAll({
-      where: { status: 1 },
-    });
+    const categories = await EventsCategory.findAll();
 
     res.status(200).json({
       message: "Active event categories fetched successfully",
@@ -1392,10 +1387,12 @@ exports.getAllEvents = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const { keyword, dateFrom, dateTo, categoryName } = req.query;
+    const status = req.query.status !== undefined ? req.query.status : 1;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
-    const whereConditions = { status: 1 };
+    const whereConditions = {};
+    if (status !== "all") whereConditions.status = status;
 
     // 🔍 Keyword Search
     if (keyword) {
@@ -1405,9 +1402,8 @@ exports.getAllEvents = async (req, res) => {
       ];
     }
 
-    // 📅 Date Filter (DATE only, not time)
+    // 📅 Date Filter
     const dateFilters = [];
-
     if (dateFrom && dateTo) {
       dateFilters.push(
         where(fn("DATE", col("date")), {
@@ -1457,7 +1453,6 @@ exports.getAllEvents = async (req, res) => {
       ],
     });
 
-    // 🖼️ Process image URLs
     const updatedEvents = events.map((event) => ({
       ...event.toJSON(),
       featured_image: event.featured_image
@@ -1486,13 +1481,14 @@ exports.getAllEvents = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 exports.getEventById = async (req, res) => {
   try {
     const { id } = req.params;
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
     const event = await Events.findOne({
-      where: { id, status: 1 },
+      where: { id },
       include: [
         {
           model: EventsCategory,
@@ -2032,14 +2028,21 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const status = req.query.status !== undefined ? req.query.status : 1;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
 
+    const whereClause = {
+      category_id: categoryId,
+    };
+
+    // Only apply status filter if it's not "all"
+    if (status !== "all") {
+      whereClause.status = status;
+    }
+
     const { count, rows } = await ParksAndRecreation.findAndCountAll({
-      where: {
-        status: 1,
-        category_id: categoryId,
-      },
+      where: whereClause,
       limit,
       offset,
       order: [["published_at", "DESC"]],
@@ -2088,6 +2091,7 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // exports.addRecyclingAndGarbageContent = async (req, res) => {
 //   try {
@@ -2387,8 +2391,15 @@ exports.deleteRecyclingAndGarbage = async (req, res) => {
 };
 exports.getAllRecyclingAndGarbage = async (req, res) => {
   try {
+    const status = req.query.status !== undefined ? req.query.status : 1;
+
+    const whereClause = {};
+    if (status !== "all") {
+      whereClause.status = status;
+    }
+
     const records = await RecyclingAndGarbage.findAll({
-      where: { status: 1 }, // Only fetch active records
+      where: whereClause,
       order: [["createdAt", "DESC"]],
     });
 
@@ -2408,6 +2419,7 @@ exports.getAllRecyclingAndGarbage = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.getRecyclingAndGarbageById = async (req, res) => {
   try {
@@ -2517,9 +2529,7 @@ exports.deletePagesCategory = async (req, res) => {
 };
 exports.getAllPagesCategories = async (req, res) => {
   try {
-    const categories = await PagesCategory.findAll({
-      where: { status: 1 },
-    });
+    const categories = await PagesCategory.findAll();
 
     res.status(200).json({
       message: "Active categories fetched successfully",
@@ -2714,11 +2724,15 @@ exports.deletePages = async (req, res) => {
 exports.getAllPages = async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const status = req.query.status !== undefined ? req.query.status : 1;
+
+    const whereClause = {};
+    if (status !== "all") {
+      whereClause.status = status;
+    }
 
     const pages = await Pages.findAll({
-      where: {
-        status: 1,
-      },
+      where: whereClause,
       order: [["createdAt", "DESC"]],
       include: [
         {
@@ -2749,6 +2763,7 @@ exports.getAllPages = async (req, res) => {
   }
 };
 
+
 exports.getAllPagesByCategoryId = async (req, res) => {
   try {
     const categoryId = parseInt(req.params.categoryId);
@@ -2756,7 +2771,6 @@ exports.getAllPagesByCategoryId = async (req, res) => {
 
     const pages = await Pages.findAll({
       where: {
-        status: 1,
         category_id: categoryId,
       },
       order: [["createdAt", "ASC"]],
