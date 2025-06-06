@@ -10,7 +10,7 @@
     "username": "root",
     "password": null,
     "database": "selmaapi",
-    "host": "127.0.0.1",
+    "host": "127.0.0.1", 
     "dialect": "mysql"
   },
   "production": {
