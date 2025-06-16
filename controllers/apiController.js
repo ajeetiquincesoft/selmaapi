@@ -88,7 +88,7 @@ exports.login = async (req, res) => {
     const payload = {
       data: user,
     };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "10h" });
     res.json({ payload, token });
   } catch (error) {
     console.error(error);
@@ -955,6 +955,7 @@ exports.updateJob = async (req, res) => {
     await job.save();
 
     return res.status(200).json({
+      success:true,
       message: "Job updated successfully",
       data: job,
     });
@@ -1246,6 +1247,7 @@ exports.addEvent = async (req, res) => {
       title,
       description,
       shortdescription,
+      address,
       link,
       category_id,
       date,
@@ -1274,6 +1276,7 @@ exports.addEvent = async (req, res) => {
       files,
       link,
       category_id,
+      address,
       date,
       time,
       organizor,
@@ -1308,6 +1311,7 @@ exports.updateEvent = async (req, res) => {
       shortdescription,
       link,
       category_id,
+      address,
       date,
       time,
       organizor,
@@ -1331,6 +1335,7 @@ exports.updateEvent = async (req, res) => {
     if (title) event.title = title;
     if (description) event.description = description;
     if (shortdescription) event.shortdescription = shortdescription;
+    if (address) event.address = address;
     if (link) event.link = link;
     if (category_id) event.category_id = category_id;
     if (date) event.date = date;
@@ -1348,6 +1353,7 @@ exports.updateEvent = async (req, res) => {
     await event.save();
 
     return res.status(200).json({
+      success:true,
       message: "Event updated successfully",
       data: event,
     });
@@ -1511,6 +1517,12 @@ exports.getEventById = async (req, res) => {
     eventData.featured_image = eventData.featured_image
       ? baseUrl + eventData.featured_image
       : null;
+
+       // Add full path to each file in files (split by comma)
+    eventData.files = eventData.files
+      ? eventData.files.split(",").map((filename) => baseUrl + filename)
+      : [];
+
 
     return res.status(200).json({
       message: "Event fetched successfully",
@@ -2091,6 +2103,122 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+exports.getAllParksAndRecreation = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status !== undefined ? req.query.status : 1;
+
+    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+
+    const whereClause = {};
+
+    // Only apply status filter if it's not "all"
+    if (status !== "all") {
+      whereClause.status = status;
+    }
+
+    const { count, rows } = await ParksAndRecreation.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [["published_at", "DESC"]],
+      include: [
+        {
+          model: ParksAndRecreationCategory,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+    });
+
+    const updatedRows = rows.map((item) => {
+      const jsonItem = item.toJSON();
+      return {
+        ...jsonItem,
+        featured_image: jsonItem.featured_image
+          ? baseUrl + jsonItem.featured_image
+          : null,
+        images: jsonItem.images
+          ? jsonItem.images.split(",").map((filename) => baseUrl + filename)
+          : [],
+        facilities: jsonItem.facilities
+          ? JSON.parse(jsonItem.facilities)
+          : null,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "All Parks and Recreation items fetched successfully",
+      data: updatedRows,
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching all parks and recreation:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.getAllParksAndRecreationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+
+    const item = await ParksAndRecreation.findOne({
+      where: { id },
+      include: [
+        {
+          model: ParksAndRecreationCategory,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Parks and Recreation item not found" });
+    }
+
+    const jsonItem = item.toJSON();
+    const updatedItem = {
+      ...jsonItem,
+      featured_image: jsonItem.featured_image
+        ? baseUrl + jsonItem.featured_image
+        : null,
+      images: jsonItem.images
+        ? jsonItem.images.split(",").map((filename) => baseUrl + filename)
+        : [],
+      facilities: jsonItem.facilities
+        ? JSON.parse(jsonItem.facilities)
+        : null,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Parks and Recreation item fetched successfully",
+      data: updatedItem,
+    });
+  } catch (error) {
+    console.error("Error fetching parks and recreation by ID:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 
 // exports.addRecyclingAndGarbageContent = async (req, res) => {
@@ -2392,7 +2520,7 @@ exports.deleteRecyclingAndGarbage = async (req, res) => {
 exports.getAllRecyclingAndGarbage = async (req, res) => {
   try {
     const status = req.query.status !== undefined ? req.query.status : 1;
-
+    
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
@@ -2878,6 +3006,101 @@ exports.sendContactForm = async (req, res) => {
   }
 };
 // controllers/apiController.js
+
+
+
+
+
+exports.getDashboardData = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { id, name, email } = decoded.data;
+
+    const [jobCount, newsCount, eventCount, latestJobs, latestNews, latestEvents] = await Promise.all([
+      Jobs.count(),
+      News.count(),
+      Events.count(),
+      Jobs.findAll({ limit: 10, order: [['createdAt', 'DESC']] }),
+      News.findAll({ limit: 10, order: [['createdAt', 'DESC']] }),
+      Events.findAll({ limit: 10, order: [['createdAt', 'DESC']] }),
+    ]);
+
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    const currentYear = new Date().getFullYear();
+
+    const getMonthlyStats = async (Model) => {
+      const rawData = await Model.findAll({
+        attributes: [
+          [sequelize.literal("DATE_FORMAT(createdAt, '%b')"), "month"],
+          [sequelize.fn("MONTH", sequelize.col("createdAt")), "monthIndex"],
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"]
+        ],
+        where: sequelize.where(
+          sequelize.fn("YEAR", sequelize.col("createdAt")),
+          currentYear
+        ),
+        group: [sequelize.literal("MONTH(createdAt)")],
+        raw: true,
+      });
+
+      const rawMap = {};
+      rawData.forEach(item => {
+        rawMap[item.month] = parseInt(item.count);
+      });
+
+      return months.map(month => ({
+        month,
+        year: currentYear,
+        count: rawMap[month] || 0
+      }));
+    };
+
+    const [jobStats, newsStats, eventStats] = await Promise.all([
+      getMonthlyStats(Jobs),
+      getMonthlyStats(News),
+      getMonthlyStats(Events),
+    ]);
+
+    return res.status(200).json({
+      message: "Dashboard data fetched successfully",
+      user: { id, name, email },
+      data: {
+        counts: {
+          jobCount,
+          newsCount,
+          eventCount,
+        },
+        latest: {
+          jobs: latestJobs,
+          news: latestNews,
+          events: latestEvents,
+        },
+        monthlyStats: {
+          jobs: jobStats,
+          news: newsStats,
+          events: eventStats,
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 
 exports.getApiDocumentation = (req, res) => {
   const documentation = {

@@ -223,6 +223,15 @@ router.get(
   "/auth/getAllParksAndRecreationByCategoryId/:categoryId",
   apiController.getAllParksAndRecreationByCategoryId
 );
+router.get(
+  "/auth/getAllParksAndRecreation",
+  apiController.getAllParksAndRecreation
+);
+
+router.get(
+  "/auth/getAllParksAndRecreationById/:id",
+  apiController.getAllParksAndRecreationById
+);
 
 router.post(
   "/auth/addRecyclingAndGarbageContent",
@@ -328,5 +337,12 @@ router.get(
 );
 
 router.post("/auth/sendContactForm", apiController.sendContactForm);
+
+
+router.get(
+  "/auth/getDashboardData", verifyToken,
+  apiController.getDashboardData
+);
+
 
 module.exports = router;
