@@ -773,12 +773,6 @@ exports.addJobsCategory = async (req, res) => {
 };
 
 exports.getAllJobsCategories = async (req, res) => {
-
-   res.status(200).json({
-      message: "Active job caxcbcvbcxtegories fetched successfully",
-      data: categories,
-    });
-
   try {
     const categories = await JobsCategory.findAll({
       include: [
@@ -811,7 +805,7 @@ exports.getAllJobsCategories = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching job categories:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
