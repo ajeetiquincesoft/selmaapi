@@ -773,6 +773,12 @@ exports.addJobsCategory = async (req, res) => {
 };
 
 exports.getAllJobsCategories = async (req, res) => {
+
+   res.status(200).json({
+      message: "Active job caxcbcvbcxtegories fetched successfully",
+      data: categories,
+    });
+
   try {
     const categories = await JobsCategory.findAll({
       include: [
