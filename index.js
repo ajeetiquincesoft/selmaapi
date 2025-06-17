@@ -19,8 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 db.sequelize.sync().then(() => {
   console.log("DB Synced");
-  app.listen(PORT,'192.168.10.92', () => {
-    console.log(`Server running on http://192.168.10.92:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 });
-
