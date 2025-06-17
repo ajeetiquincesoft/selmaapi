@@ -114,7 +114,7 @@ exports.getauthuser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     if (user.meta?.profile_pic) {
       user.meta.profile_pic = baseUrl + user.meta.profile_pic;
@@ -527,7 +527,7 @@ exports.getAllNews = async (req, res) => {
     const keyword = req.query.keyword || "";
     const status = typeof req.query.status !== "undefined" ? req.query.status : 1;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereCondition = {
       ...(status !== "all" && { status }), // Only apply status filter if not "all"
@@ -591,7 +591,7 @@ exports.getNewsById = async (req, res) => {
   try {
     const newsId = req.params.id;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const news = await News.findOne({
       where: { id: newsId },
@@ -972,7 +972,7 @@ exports.getAllJobs = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const status = req.query.status !== undefined ? req.query.status : 1; // Default to 1
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereClause = status === "all" ? {} : { status };
 
@@ -1028,7 +1028,7 @@ exports.getJobsByCategoryId = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const { count, rows: jobs } = await Jobs.findAndCountAll({
       where: {
@@ -1083,7 +1083,7 @@ exports.getJobsByCategoryId = async (req, res) => {
 exports.getJobById = async (req, res) => {
   try {
     const { id } = req.params;
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const job = await Jobs.findOne({
       where: { id },
@@ -1395,7 +1395,7 @@ exports.getAllEvents = async (req, res) => {
     const { keyword, dateFrom, dateTo, categoryName } = req.query;
     const status = req.query.status !== undefined ? req.query.status : 1;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereConditions = {};
     if (status !== "all") whereConditions.status = status;
@@ -1491,7 +1491,7 @@ exports.getAllEvents = async (req, res) => {
 exports.getEventById = async (req, res) => {
   try {
     const { id } = req.params;
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const event = await Events.findOne({
       where: { id },
@@ -1632,7 +1632,7 @@ exports.updateParksAndRecreationContent = async (req, res) => {
 exports.getParksAndRecreationContent = async (req, res) => {
   try {
     const { id } = req.params;
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     // Get category list
     const categoriesRaw = await ParksAndRecreationCategory.findAll({
@@ -2042,7 +2042,7 @@ exports.getAllParksAndRecreationByCategoryId = async (req, res) => {
     const offset = (page - 1) * limit;
     const status = req.query.status !== undefined ? req.query.status : 1;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereClause = {
       category_id: categoryId,
@@ -2110,7 +2110,7 @@ exports.getAllParksAndRecreation = async (req, res) => {
     const offset = (page - 1) * limit;
     const status = req.query.status !== undefined ? req.query.status : 1;
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereClause = {};
 
@@ -2173,7 +2173,7 @@ exports.getAllParksAndRecreation = async (req, res) => {
 exports.getAllParksAndRecreationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const item = await ParksAndRecreation.findOne({
       where: { id },
@@ -2391,7 +2391,7 @@ exports.deleteRecyclingAndGarbageContent = async (req, res) => {
 
 exports.getRecyclingAndGarbageContent = async (req, res) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const content = await RecyclingAndGarbageContent.findOne();
 
@@ -2531,7 +2531,7 @@ exports.getAllRecyclingAndGarbage = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const updatedRecords = records.map((record) => ({
       ...record.toJSON(),
@@ -2561,7 +2561,7 @@ exports.getRecyclingAndGarbageById = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const updatedRecord = {
       ...record.toJSON(),
@@ -2851,7 +2851,7 @@ exports.deletePages = async (req, res) => {
 
 exports.getAllPages = async (req, res) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
     const status = req.query.status !== undefined ? req.query.status : 1;
 
     const whereClause = {};
@@ -2895,7 +2895,7 @@ exports.getAllPages = async (req, res) => {
 exports.getAllPagesByCategoryId = async (req, res) => {
   try {
     const categoryId = parseInt(req.params.categoryId);
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/`;
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const pages = await Pages.findAll({
       where: {
