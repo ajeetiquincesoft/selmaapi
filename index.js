@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const db = require("./models");
+const path = require('path');
 require("dotenv").config();
 
 app.use(cors());
@@ -11,6 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 const userRoutes = require("./routes/route");
 app.use("/api", userRoutes);
 
+app.use('/uploads', express.static(path.join(__dirname, 'images')));
 // Serve static images
 app.use("/images", express.static("images"));
 
