@@ -774,30 +774,7 @@ exports.addJobsCategory = async (req, res) => {
 
 exports.getAllJobsCategories = async (req, res) => {
   try {
-    const categories = await JobsCategory.findAll({
-      include: [
-        {
-          model: Jobs,
-          as: "jobs",
-          where: { status: 1 },
-          required: false, // allow categories even if they have 0 active jobs
-          attributes: [],
-        },
-      ],
-      attributes: {
-        include: [
-          [
-            // Count only jobs with status: 1
-            sequelize.literal(`(
-              SELECT COUNT(*)
-              FROM jobs AS job
-              WHERE job.category_id = JobsCategory.id AND job.status = 1
-            )`),
-            "totalopenings",
-          ],
-        ],
-      },
-    });
+    const categories = await JobsCategory.findAll();
 
     res.status(200).json({
       message: "Active job categories fetched successfully",
