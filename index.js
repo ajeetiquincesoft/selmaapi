@@ -4,7 +4,13 @@ const cors = require("cors");
 const db = require("./models");
 const path = require('path');
 require("dotenv").config();
-
+app.enable("trust proxy");
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === "production" && req.protocol === "http") {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -23,6 +29,6 @@ const PORT = process.env.PORT || 3000;
 db.sequelize.sync().then(() => {
   console.log("DB Synced");
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on https://localhost:${PORT}`);
   });
 });
