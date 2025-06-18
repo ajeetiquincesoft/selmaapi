@@ -2671,14 +2671,11 @@ exports.getAllPagesCategories = async (req, res) => {
 
 exports.addPages = async (req, res) => {
   try {
-    // Extract token from Authorization header
+    // Extract token
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
-    // Verify and decode token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.data.id;
 
     const {
@@ -2688,22 +2685,45 @@ exports.addPages = async (req, res) => {
       category_id,
       name,
       designation,
-      counsil_members,
       address,
       contacts,
       status,
       published_at,
     } = req.body;
 
-    // Get uploaded files
-    const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
-    const imagesFiles = req.files?.["images"] || [];
+    // Process files
+    const fileMap = {};
+    req.files?.forEach(file => {
+      if (!fileMap[file.fieldname]) fileMap[file.fieldname] = [];
+      fileMap[file.fieldname].push(file);
+    });
 
-    // Prepare fields to save
+    const featuredImageFile = fileMap["featured_image"]?.[0] || null;
+    const imagesFiles = fileMap["images"] || [];
+
     const featured_image = featuredImageFile ? featuredImageFile.filename : null;
-    const images = imagesFiles.length > 0 ? imagesFiles.map(file => file.filename).join(",") : null;
+    const images = imagesFiles.length > 0 ? imagesFiles.map(f => f.filename).join(",") : null;
 
-    // Create the Pages record
+    // Handle dynamic council members with designation
+    const council_members = [];
+    let index = 0;
+    while (true) {
+      const memberName = req.body[`council_name_${index}`];
+      const memberDesignation = req.body[`council_designation_${index}`];
+      const memberImage = fileMap[`council_image_${index}`]?.[0]?.filename;
+
+      if (!memberName && !memberDesignation && !memberImage) break;
+
+      council_members.push({
+        name: memberName || null,
+        designation: memberDesignation || null,
+        image: memberImage || null,
+      });
+
+      index++;
+    }
+
+    // Save record
     const page = await Pages.create({
       userId,
       title,
@@ -2714,7 +2734,7 @@ exports.addPages = async (req, res) => {
       category_id,
       name,
       designation,
-      counsil_members,
+      counsil_members: JSON.stringify(council_members),
       address,
       contacts,
       status,
@@ -2736,14 +2756,10 @@ exports.addPages = async (req, res) => {
 
 exports.updatePages = async (req, res) => {
   try {
-    // Extract token from Authorization header
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
-    // Verify and decode token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userIdFromToken = decoded.data.id;
 
     const {
@@ -2754,34 +2770,54 @@ exports.updatePages = async (req, res) => {
       category_id,
       name,
       designation,
-      counsil_members,
       address,
       contacts,
       status,
       published_at,
     } = req.body;
 
-    // Find existing record
+    // Find the page
     const page = await Pages.findByPk(id);
-    if (!page) {
-      return res.status(404).json({ message: "Page not found" });
+    if (!page) return res.status(404).json({ message: "Page not found" });
+
+    // File map for easy access
+    const fileMap = {};
+    req.files?.forEach(file => {
+      if (!fileMap[file.fieldname]) fileMap[file.fieldname] = [];
+      fileMap[file.fieldname].push(file);
+    });
+
+    // Process feature and gallery images
+    const featuredImageFile = fileMap["featured_image"]?.[0] || null;
+    const imagesFiles = fileMap["images"] || [];
+
+    // Council members update (if present)
+    const council_members = [];
+    let i = 0;
+    while (true) {
+      const memberName = req.body[`council_name_${i}`];
+      const memberDesignation = req.body[`council_designation_${i}`];
+      const memberImage = fileMap[`council_image_${i}`]?.[0]?.filename;
+
+      if (!memberName && !memberDesignation && !memberImage) break;
+
+      council_members.push({
+        name: memberName || null,
+        designation: memberDesignation || null,
+        image: memberImage || null,
+      });
+
+      i++;
     }
 
-    // Optional: you can verify if userIdFromToken matches page.userId here for authorization
-
-    // Handle uploaded files
-    const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
-    const imagesFiles = req.files?.["images"] || [];
-
-    // Update fields only if provided
-    page.userId = userIdFromToken; // always update userId from token
+    // Update fields
+    page.userId = userIdFromToken;
     if (title) page.title = title;
     if (description) page.description = description;
     if (shortdescription) page.shortdescription = shortdescription;
     if (category_id) page.category_id = category_id;
     if (name) page.name = name;
     if (designation) page.designation = designation;
-    if (counsil_members) page.counsil_members = counsil_members;
     if (address) page.address = address;
     if (contacts) page.contacts = contacts;
     if (typeof status !== "undefined") page.status = status;
@@ -2789,7 +2825,12 @@ exports.updatePages = async (req, res) => {
 
     if (featuredImageFile) page.featured_image = featuredImageFile.filename;
     if (imagesFiles.length > 0) {
-      page.images = imagesFiles.map((file) => file.filename).join(",");
+      page.images = imagesFiles.map(file => file.filename).join(",");
+    }
+
+    // Update council members if any provided
+    if (council_members.length > 0) {
+      page.counsil_members = JSON.stringify(council_members);
     }
 
     await page.save();
@@ -2806,6 +2847,7 @@ exports.updatePages = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // exports.deletePages = async (req, res) => {
 //   try {
@@ -2871,15 +2913,31 @@ exports.getAllPages = async (req, res) => {
       ],
     });
 
-    const updatedPages = pages.map((page) => ({
-      ...page.toJSON(),
-      featured_image: page.featured_image
-        ? baseUrl + page.featured_image
-        : null,
-      images: page.images
-        ? page.images.split(",").map((img) => baseUrl + img)
-        : [],
-    }));
+    const updatedPages = pages.map((page) => {
+      const jsonPage = page.toJSON();
+
+      // Update featured_image and images
+      jsonPage.featured_image = jsonPage.featured_image
+        ? baseUrl + jsonPage.featured_image
+        : null;
+
+      jsonPage.images = jsonPage.images
+        ? jsonPage.images.split(",").map((img) => baseUrl + img)
+        : [];
+
+      // Parse and map council members with full image path
+      try {
+        const councilMembers = JSON.parse(jsonPage.counsil_members || "[]");
+        jsonPage.counsil_members = councilMembers.map((member) => ({
+          ...member,
+          image: member.image ? baseUrl + member.image : null,
+        }));
+      } catch (e) {
+        jsonPage.counsil_members = [];
+      }
+
+      return jsonPage;
+    });
 
     return res.status(200).json({
       message: "Pages fetched successfully",

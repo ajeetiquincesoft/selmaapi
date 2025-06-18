@@ -305,13 +305,8 @@ router.get("/auth/getallpagescategory", apiController.getAllPagesCategories);
 
 router.post(
   "/auth/addpages",
-  [
-    verifyToken, // Auth middleware
-    upload.fields([
-      { name: "featured_image", maxCount: 1 }, // Single featured image
-      { name: "images", maxCount: 5 }, // Multiple images (up to 5)
-    ]),
-  ],
+  verifyToken, // Auth middleware
+  upload.any(), // Accepts all file fields, including dynamic ones
   apiController.addPages
 );
 
