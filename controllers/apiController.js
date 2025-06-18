@@ -2949,6 +2949,57 @@ exports.getAllPages = async (req, res) => {
   }
 };
 
+exports.getPageById = async (req, res) => {
+  try {
+    const { id } = req.params; // page ID from route parameter
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
+
+    const page = await Pages.findByPk(id, {
+      include: [
+        {
+          model: PagesCategory,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    if (!page) {
+      return res.status(404).json({ message: "Page not found" });
+    }
+
+    const jsonPage = page.toJSON();
+
+    // Format featured image and gallery images
+    jsonPage.featured_image = jsonPage.featured_image
+      ? baseUrl + jsonPage.featured_image
+      : null;
+
+    jsonPage.images = jsonPage.images
+      ? jsonPage.images.split(",").map((img) => baseUrl + img)
+      : [];
+
+    // Format council members with full image path
+    try {
+      const councilMembers = JSON.parse(jsonPage.counsil_members || "[]");
+      jsonPage.counsil_members = councilMembers.map((member) => ({
+        ...member,
+        image: member.image ? baseUrl + member.image : null,
+      }));
+    } catch (e) {
+      jsonPage.counsil_members = [];
+    }
+
+    return res.status(200).json({
+      message: "Page fetched successfully",
+      data: jsonPage,
+    });
+  } catch (error) {
+    console.error("Error fetching page:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 exports.getAllPagesByCategoryId = async (req, res) => {
   try {

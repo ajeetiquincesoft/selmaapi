@@ -325,7 +325,7 @@ router.post(
 router.post("/auth/deletePages", verifyToken, apiController.deletePages);
 
 router.get("/auth/getAllPages", apiController.getAllPages);
-
+router.get("/auth/getPageById/:id", apiController.getPageById);
 router.get(
   "/auth/getAllPagesByCategoryId/:categoryId",
   apiController.getAllPagesByCategoryId
