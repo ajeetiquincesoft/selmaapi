@@ -1,23 +1,23 @@
 {
   "development": {
-    "username": "root",
-    "password": null,
-    "database": "selmaapi", 
-    "host": "127.0.0.1",
+    "username": "selmaapi",
+    "password": "$Admin@112",
+    "database": "admin_selmaapi",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "test": {
-    "username": "root",
-    "password": null,
-    "database": "selmaapi",
-    "host": "127.0.0.1",
+    "username": "selmaapi",
+    "password": "$Admin@112",
+    "database": "admin_selmaapi",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "selmaapi",
-    "host": "127.0.0.1",
+    "username": "selmaapi",
+    "password": "$Admin@112",
+    "database": "admin_selmaapi",
+    "host": "localhost",
     "dialect": "mysql"
   }
 }
