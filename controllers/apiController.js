@@ -1401,12 +1401,12 @@ exports.getAllEvents = async (req, res) => {
     if (status !== "all") whereConditions.status = status;
 
     // 🔍 Keyword Search
-    if (keyword) {
-      whereConditions[Op.or] = [
-        { title: { [Op.like]: `%${keyword}%` } },
-        { description: { [Op.like]: `%${keyword}%` } },
-      ];
-    }
+    // if (keyword) {
+    //   whereConditions[Op.or] = [
+    //     { title: { [Op.like]: `%${keyword}%` } },
+    //     { description: { [Op.like]: `%${keyword}%` } },
+    //   ];
+    // }
 
     // 📅 Date Filter
     const dateFilters = [];
