@@ -88,7 +88,7 @@ exports.login = async (req, res) => {
     const payload = {
       data: user,
     };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "10h" });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "28d" });
     res.json({ payload, token });
   } catch (error) {
     console.error(error);
