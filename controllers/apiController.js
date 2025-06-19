@@ -2687,6 +2687,7 @@ exports.addPages = async (req, res) => {
       designation,
       address,
       contacts,
+      hours,
       status,
       published_at,
     } = req.body;
@@ -2737,6 +2738,7 @@ exports.addPages = async (req, res) => {
       counsil_members: JSON.stringify(council_members),
       address,
       contacts,
+      hours,
       status,
       published_at,
     });
@@ -2772,6 +2774,7 @@ exports.updatePages = async (req, res) => {
       designation,
       address,
       contacts,
+      hours,
       status,
       published_at,
     } = req.body;
@@ -2820,6 +2823,8 @@ exports.updatePages = async (req, res) => {
     if (designation) page.designation = designation;
     if (address) page.address = address;
     if (contacts) page.contacts = contacts;
+    if (hours) page.hours = hours;
+    
     if (typeof status !== "undefined") page.status = status;
     if (published_at) page.published_at = published_at;
 
