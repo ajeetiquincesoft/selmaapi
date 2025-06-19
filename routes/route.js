@@ -311,14 +311,9 @@ router.post(
 );
 
 router.post(
-  "/auth/updatepages",
-  [
+  "/auth/updatepages",  
     verifyToken, // Auth middleware
-    upload.fields([
-      { name: "featured_image", maxCount: 1 }, // Single featured image
-      { name: "images", maxCount: 5 }, // Multiple images (up to 5)
-    ]),
-  ],
+   upload.any(),
   apiController.updatePages
 );
 

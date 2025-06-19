@@ -2894,6 +2894,11 @@ exports.deletePages = async (req, res) => {
 exports.getAllPages = async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     const status = req.query.status !== undefined ? req.query.status : 1;
 
     const whereClause = {};
@@ -2901,8 +2906,10 @@ exports.getAllPages = async (req, res) => {
       whereClause.status = status;
     }
 
-    const pages = await Pages.findAll({
+    const { count, rows } = await Pages.findAndCountAll({
       where: whereClause,
+      limit,
+      offset,
       order: [["createdAt", "DESC"]],
       include: [
         {
@@ -2913,10 +2920,9 @@ exports.getAllPages = async (req, res) => {
       ],
     });
 
-    const updatedPages = pages.map((page) => {
+    const updatedPages = rows.map((page) => {
       const jsonPage = page.toJSON();
 
-      // Update featured_image and images
       jsonPage.featured_image = jsonPage.featured_image
         ? baseUrl + jsonPage.featured_image
         : null;
@@ -2925,7 +2931,6 @@ exports.getAllPages = async (req, res) => {
         ? jsonPage.images.split(",").map((img) => baseUrl + img)
         : [];
 
-      // Parse and map council members with full image path
       try {
         const councilMembers = JSON.parse(jsonPage.counsil_members || "[]");
         jsonPage.counsil_members = councilMembers.map((member) => ({
@@ -2940,8 +2945,14 @@ exports.getAllPages = async (req, res) => {
     });
 
     return res.status(200).json({
+      success: true,
       message: "Pages fetched successfully",
       data: updatedPages,
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+      },
     });
   } catch (error) {
     console.error("Error fetching pages:", error);
