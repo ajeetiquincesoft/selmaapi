@@ -333,6 +333,11 @@ router.get(
   "/auth/getDashboardData", verifyToken,
   apiController.getDashboardData
 );
-
+router.post(
+  "/auth/sendnotification",
+  verifyToken,
+  upload.any(), // Accepts file uploads
+  apiController.sendNotification
+);
 
 module.exports = router;
