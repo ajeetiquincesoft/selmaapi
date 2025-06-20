@@ -736,6 +736,7 @@ exports.updateNews = async (req, res) => {
       shortdescription,
       category_id,
       status,
+      existing_images, // This will come as JSON string
       published_at,
     } = req.body;
 
@@ -756,17 +757,44 @@ exports.updateNews = async (req, res) => {
       ? featuredImageFile.filename
       : news.featured_image;
 
-    const images =
-      imagesFiles.length > 0
-        ? imagesFiles.map((file) => file.filename).join(",")
-        : news.images;
+    const extractFilename = (img) => {
+      if (typeof img !== 'string') return img;
+      const urlParts = img.split('/');
+      return urlParts[urlParts.length - 1].split('?')[0]; // Remove query params if any
+    };
+
+
+    let images = [];
+
+    // 1. Add existing images that weren't removed
+    if (existing_images) {
+      try {
+        const parsedExistingImages = JSON.parse(existing_images);
+        if (Array.isArray(parsedExistingImages)) {
+          images = parsedExistingImages.map(img => extractFilename(img));
+        }
+      } catch (e) {
+        console.error("Error parsing existing_images", e);
+      }
+    }
+
+    // 2. Add new images (just store filenames)
+    if (req.files?.["images"]) {
+      const newImages = req.files["images"].map(file => file.filename);
+      images = images.concat(newImages);
+    }
+
+    // If no images were provided at all, keep the original ones
+    if (images.length === 0 && !req.files?.["images"]) {
+      images = news.images ? news.images.split(',') : [];
+    }
 
     await news.update({
       title,
       description,
       shortdescription,
       featured_image,
-      images,
+      images: images.join(','),
       category_id,
       status,
       published_at,
@@ -1027,7 +1055,7 @@ exports.updateJob = async (req, res) => {
     await job.save();
 
     return res.status(200).json({
-      success:true,
+      success: true,
       message: "Job updated successfully",
       data: job,
     });
@@ -1388,6 +1416,7 @@ exports.updateEvent = async (req, res) => {
       time,
       organizor,
       status,
+      existing_images, // This will come as JSON string
       published_at,
     } = req.body;
 
@@ -1398,9 +1427,39 @@ exports.updateEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    const extractFilename = (img) => {
+      if (typeof img !== 'string') return img;
+      const urlParts = img.split('/');
+      return urlParts[urlParts.length - 1].split('?')[0]; // Remove query params if any
+    };
+
     // Get uploaded files
     const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
-    const filesUploads = req.files?.["files"] || [];
+
+    let files = [];
+
+    // 1. Add existing files that weren't removed (extract filenames)
+    if (existing_images) {
+      try {
+        const parsedExistingFiles = JSON.parse(existing_images);
+        if (Array.isArray(parsedExistingFiles)) {
+          files = parsedExistingFiles.map(file => extractFilename(file));
+        }
+      } catch (e) {
+        console.error("Error parsing existing_images", e);
+      }
+    }
+
+    // 2. Add new files
+    if (req.files?.["files"]) {
+      const newFiles = req.files["files"].map(file => file.filename);
+      files = files.concat(newFiles);
+    }
+
+    // If no files were provided at all, keep the original ones
+    if (files.length === 0 && !req.files?.["files"]) {
+      files = event.files ? event.files.split(',') : [];
+    }
 
     // Update fields
     if (userId) event.userId = userId;
@@ -1418,14 +1477,15 @@ exports.updateEvent = async (req, res) => {
 
     // If new files were uploaded, update paths
     if (featuredImageFile) event.featured_image = featuredImageFile.filename;
-    if (filesUploads.length > 0)
-      event.files = filesUploads.map((file) => file.filename).join(",");
+
+
+    event.files = files.join(',');
 
     // Save changes
     await event.save();
 
     return res.status(200).json({
-      success:true,
+      success: true,
       message: "Event updated successfully",
       data: event,
     });
@@ -1590,7 +1650,7 @@ exports.getEventById = async (req, res) => {
       ? baseUrl + eventData.featured_image
       : null;
 
-       // Add full path to each file in files (split by comma)
+    // Add full path to each file in files (split by comma)
     eventData.files = eventData.files
       ? eventData.files.split(",").map((filename) => baseUrl + filename)
       : [];
@@ -2592,7 +2652,7 @@ exports.deleteRecyclingAndGarbage = async (req, res) => {
 exports.getAllRecyclingAndGarbage = async (req, res) => {
   try {
     const status = req.query.status !== undefined ? req.query.status : 1;
-    
+
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
@@ -2896,7 +2956,7 @@ exports.updatePages = async (req, res) => {
     if (address) page.address = address;
     if (contacts) page.contacts = contacts;
     if (hours) page.hours = hours;
-    
+
     if (typeof status !== "undefined") page.status = status;
     if (published_at) page.published_at = published_at;
 
