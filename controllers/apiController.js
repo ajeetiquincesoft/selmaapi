@@ -24,6 +24,7 @@ const path = require("path");
 const JWT_SECRET = process.env.JWT_SECRET;
 const { Op, fn, col, where, literal } = require("sequelize");
 const { sequelize } = require("../models");
+const admin = require("../firebase");
 exports.getUsersWithMeta = async (req, res) => {
   try {
     const users = await db.User.findAll({ include: db.UserMeta });
@@ -3225,7 +3226,44 @@ exports.getDashboardData = async (req, res) => {
   }
 };
 
+exports.sendNotification = async (req, res) => {
+  try {
+    const { title, body } = req.body;
 
+    // Image file (if provided via upload)
+    const imageFile = req.files?.find(file => file.fieldname === "image");
+
+    if (!title || !body) {
+      return res.status(400).json({ message: "Title and body are required" });
+    }
+
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = `${req.protocol}://${req.get("host")}/images/${imageFile.filename}`;
+    }
+
+    const message = {
+      notification: {
+        title,
+        body,
+        ...(imageUrl ? { image: imageUrl } : {}),
+      },
+      topic: "all",
+    };
+
+    const response = await admin.messaging().send(message);
+
+    res.json({
+      success: true,
+      message: "Notification sent to topic: all",
+      firebaseResponse: response,
+      imageUrl,
+    });
+  } catch (error) {
+    console.error("Notification Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 
 exports.getApiDocumentation = (req, res) => {
   const documentation = {
