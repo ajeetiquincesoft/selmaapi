@@ -17,7 +17,7 @@ module.exports = {
         autoIncrement: true,
       },
       role: Sequelize.STRING,
-      permissions: {
+      userpermissions: {
         type: Sequelize.TEXT,
         unique: true, // <-- this ensures email uniqueness
         allowNull: false,

@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    permissions: {
+    userpermissions: {
       type: DataTypes.TEXT,
       allowNull: false
     },
