@@ -17,7 +17,7 @@ module.exports = {
         autoIncrement: true,
       },
       role: Sequelize.STRING,
-      userpermissions: {
+      permissions: {
         type: Sequelize.TEXT,
         allowNull: false
       },
