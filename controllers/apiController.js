@@ -2005,11 +2005,13 @@ exports.addParksAndRecreation = async (req, res) => {
   }
 };
 
+
+
+
 exports.updateParksAndRecreation = async (req, res) => {
   try {
     const {
       id, // ID of the ParksAndRecreation record to update
-      userId,
       title,
       description,
       shortdescription,
@@ -2019,58 +2021,203 @@ exports.updateParksAndRecreation = async (req, res) => {
       time,
       organizor,
       status,
+      existing_images, // JSON string of existing images
       published_at,
-      facilities, // JSON string or array
+      facilities, // JSON string of facilities
     } = req.body;
+
+    // Validate required fields
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "ID is required for update"
+      });
+    }
 
     // Find the record by ID
     const park = await ParksAndRecreation.findByPk(id);
-
     if (!park) {
-      return res
-        .status(404)
-        .json({ message: "Parks & Recreation record not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Parks & Recreation record not found"
+      });
     }
 
-    // Handle file uploads
+    // Helper function to extract filename from URL
+    const extractFilename = (img) => {
+      if (typeof img !== 'string') return img;
+      const urlParts = img.split('/');
+      return urlParts[urlParts.length - 1].split('?')[0]; // Remove query params if any
+    };
+
+    // Handle featured image
     const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
-    const imagesFiles = req.files?.["images"] || [];
+    const featured_image = featuredImageFile
+      ? featuredImageFile.filename
+      : park.featured_image;
 
-    // Update fields conditionally
-    if (userId) park.userId = userId;
-    if (title) park.title = title;
-    if (description) park.description = description;
-    if (shortdescription) park.shortdescription = shortdescription;
-    if (link) park.link = link;
-    if (category_id) park.category_id = category_id;
-    if (date) park.date = date;
-    if (time) park.time = time;
-    if (organizor) park.organizor = organizor;
-    if (typeof status !== "undefined") park.status = status;
-    if (published_at) park.published_at = published_at;
+    // Handle images
+    let images = [];
 
-    // Parse facilities JSON if present
-    if (facilities) {
-      park.facilities = facilities;
+    // 1. Process existing images that weren't removed
+    if (existing_images) {
+      try {
+        const parsedExistingImages = JSON.parse(existing_images);
+        if (Array.isArray(parsedExistingImages)) {
+          images = parsedExistingImages.map(img => extractFilename(img));
+        }
+      } catch (e) {
+        console.error("Error parsing existing_images", e);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid existing images format"
+        });
+      }
     }
 
-    // Update file paths if uploaded
-    if (featuredImageFile) park.featured_image = featuredImageFile.filename;
-    if (imagesFiles.length > 0)
-      park.images = imagesFiles.map((file) => file.filename).join(",");
+    // 2. Add new images
+    if (req.files?.["images"]) {
+      const newImages = req.files["images"].map(file => file.filename);
+      images = images.concat(newImages);
+    }
 
-    // Save the updated record
-    await park.save();
+    // If no images were provided at all, keep the original ones
+    if (images.length === 0 && !req.files?.["images"]) {
+      images = park.images ? park.images.split(',') : [];
+    }
+
+    // Parse and validate facilities
+    let parsedFacilities = [];
+    if (facilities) {
+      try {
+        parsedFacilities = typeof facilities === 'string'
+          ? JSON.parse(facilities)
+          : facilities;
+
+        if (!Array.isArray(parsedFacilities)) {
+          throw new Error("Facilities must be an array");
+        }
+      } catch (e) {
+        console.error("Error parsing facilities", e);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid facilities format"
+        });
+      }
+    } else {
+      // Keep existing facilities if none provided
+      parsedFacilities = park.facilities
+        ? typeof park.facilities === 'string'
+          ? JSON.parse(park.facilities)
+          : park.facilities
+        : [];
+    }
+
+    // Update the park record
+    const updatedFields = {
+      title: title || park.title,
+      description: description || park.description,
+      shortdescription: shortdescription || park.shortdescription,
+      link: link || park.link,
+      category_id: category_id || park.category_id,
+      date: date || park.date,
+      time: time || park.time,
+      organizor: organizor || park.organizor,
+      status: typeof status !== 'undefined' ? status : park.status,
+      published_at: published_at || park.published_at,
+      featured_image: featured_image,
+      images: images.join(','),
+      facilities: JSON.stringify(parsedFacilities)
+    };
+
+    await park.update(updatedFields);
 
     return res.status(200).json({
+      success: true,
       message: "Parks & Recreation record updated successfully",
-      data: park,
+      data: park
     });
+
   } catch (error) {
     console.error("Error updating Parks & Recreation:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
   }
 };
+
+
+
+
+
+// exports.updateParksAndRecreation = async (req, res) => {
+//   try {
+//     const {
+//       id, // ID of the ParksAndRecreation record to update
+//       userId,
+//       title,
+//       description,
+//       shortdescription,
+//       link,
+//       category_id,
+//       date,
+//       time,
+//       organizor,
+//       status,
+//       published_at,
+//       facilities, // JSON string or array
+//     } = req.body;
+
+//     // Find the record by ID
+//     const park = await ParksAndRecreation.findByPk(id);
+
+//     if (!park) {
+//       return res
+//         .status(404)
+//         .json({ message: "Parks & Recreation record not found" });
+//     }
+
+//     // Handle file uploads
+//     const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
+//     const imagesFiles = req.files?.["images"] || [];
+
+//     // Update fields conditionally
+//     if (userId) park.userId = userId;
+//     if (title) park.title = title;
+//     if (description) park.description = description;
+//     if (shortdescription) park.shortdescription = shortdescription;
+//     if (link) park.link = link;
+//     if (category_id) park.category_id = category_id;
+//     if (date) park.date = date;
+//     if (time) park.time = time;
+//     if (organizor) park.organizor = organizor;
+//     if (typeof status !== "undefined") park.status = status;
+//     if (published_at) park.published_at = published_at;
+
+//     // Parse facilities JSON if present
+//     if (facilities) {
+//       park.facilities = facilities;
+//     }
+
+//     // Update file paths if uploaded
+//     if (featuredImageFile) park.featured_image = featuredImageFile.filename;
+//     if (imagesFiles.length > 0)
+//       park.images = imagesFiles.map((file) => file.filename).join(",");
+
+//     // Save the updated record
+//     await park.save();
+
+//     return res.status(200).json({
+//       message: "Parks & Recreation record updated successfully",
+//       data: park,
+//     });
+//   } catch (error) {
+//     console.error("Error updating Parks & Recreation:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
 exports.deleteParksAndRecreationById = async (req, res) => {
   try {
     const { id } = req.body;
@@ -2817,103 +2964,174 @@ exports.addPages = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
+
 exports.updatePages = async (req, res) => {
   try {
+    // Authentication and Authorization
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "No token provided" });
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No token provided"
+      });
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userIdFromToken = decoded.data.id;
 
-    const {
-      id, // ID of the page to update
-      title,
-      description,
-      shortdescription,
-      category_id,
-      name,
-      designation,
-      address,
-      contacts,
-      hours,
-      status,
-      published_at,
-    } = req.body;
+    // Input validation
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Page ID is required"
+      });
+    }
 
     // Find the page
     const page = await Pages.findByPk(id);
-    if (!page) return res.status(404).json({ message: "Page not found" });
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        message: "Page not found"
+      });
+    }
 
-    // File map for easy access
+    // Helper function to extract filename from URL
+    const extractFilename = (img) => {
+      if (typeof img !== 'string') return img;
+      const urlParts = img.split('/');
+      return urlParts[urlParts.length - 1].split('?')[0];
+    };
+
+    // Process files
     const fileMap = {};
-    req.files?.forEach(file => {
-      if (!fileMap[file.fieldname]) fileMap[file.fieldname] = [];
-      fileMap[file.fieldname].push(file);
-    });
+    if (req.files) {
+      req.files.forEach(file => {
+        if (!fileMap[file.fieldname]) fileMap[file.fieldname] = [];
+        fileMap[file.fieldname].push(file);
+      });
+    }
 
-    // Process feature and gallery images
-    const featuredImageFile = fileMap["featured_image"]?.[0] || null;
-    const imagesFiles = fileMap["images"] || [];
+    // Handle featured image
+    const featuredImageFile = req.files?.["featured_image"]?.[0] || null;
+    const featured_image = featuredImageFile
+      ? featuredImageFile.filename
+      : page.featured_image;
 
-    // Council members update (if present)
+
+    // Handle gallery images
+    let images = [];
+
+    // Process existing images
+    if (req.body.existing_images) {
+      try {
+        const parsedExistingImages = JSON.parse(req.body.existing_images);
+        if (Array.isArray(parsedExistingImages)) {
+          images = parsedExistingImages.map(img => extractFilename(img));
+        }
+      } catch (e) {
+        console.error("Error parsing existing_images", e);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid existing images format"
+        });
+      }
+    }
+
+    // Add new images
+    if (fileMap["images"]?.length > 0) {
+      const newImages = fileMap["images"].map(file => file.filename);
+      images = images.concat(newImages);
+    }
+
+    // Fallback to original images if none provided
+    if (images.length === 0 && !fileMap["images"]) {
+      images = page.images ? page.images.split(',') : [];
+    }
+
+    // Process council members
     const council_members = [];
     let i = 0;
     while (true) {
       const memberName = req.body[`council_name_${i}`];
       const memberDesignation = req.body[`council_designation_${i}`];
-      const memberImage = fileMap[`council_image_${i}`]?.[0]?.filename;
+      const memberImageFile = fileMap[`council_image_${i}`]?.[0];
+      const memberImageUrl = req.body[`council_image_url_${i}`];
 
-      if (!memberName && !memberDesignation && !memberImage) break;
+      if (!memberName && !memberDesignation && !memberImageFile && !memberImageUrl) break;
 
       council_members.push({
         name: memberName || null,
         designation: memberDesignation || null,
-        image: memberImage || null,
+        image: memberImageFile
+          ? memberImageFile.filename
+          : memberImageUrl
+            ? extractFilename(memberImageUrl)
+            : null,
       });
-
       i++;
     }
 
-    // Update fields
-    page.userId = userIdFromToken;
-    if (title) page.title = title;
-    if (description) page.description = description;
-    if (shortdescription) page.shortdescription = shortdescription;
-    if (category_id) page.category_id = category_id;
-    if (name) page.name = name;
-    if (designation) page.designation = designation;
-    if (address) page.address = address;
-    if (contacts) page.contacts = contacts;
-    if (hours) page.hours = hours;
+    // Prepare update data
+    const updateData = {
+      userId: userIdFromToken,
+      title: req.body.title || page.title,
+      description: req.body.description || page.description,
+      shortdescription: req.body.shortdescription || page.shortdescription,
+      category_id: req.body.category_id || page.category_id,
+      name: req.body.name || page.name,
+      designation: req.body.designation || page.designation,
+      address: req.body.address || page.address,
+      contacts: req.body.contacts || page.contacts,
+      hours: req.body.hours || page.hours,
+      status: typeof req.body.status !== 'undefined' ? req.body.status : page.status,
+      published_at: req.body.published_at || page.published_at,
+      featured_image: featured_image,
+      images: images.join(','),
+      council_members: council_members.length > 0 ? JSON.stringify(council_members) : page.council_members
+    };
 
-    if (typeof status !== "undefined") page.status = status;
-    if (published_at) page.published_at = published_at;
-
-    if (featuredImageFile) page.featured_image = featuredImageFile.filename;
-    if (imagesFiles.length > 0) {
-      page.images = imagesFiles.map(file => file.filename).join(",");
-    }
-
-    // Update council members if any provided
-    if (council_members.length > 0) {
-      page.counsil_members = JSON.stringify(council_members);
-    }
-
-    await page.save();
+    // Update the page
+    await page.update(updateData);
 
     return res.status(200).json({
+      success: true,
       message: "Page updated successfully",
-      data: page,
+      data: page
     });
+
   } catch (error) {
     console.error("Error updating page:", error);
+
     if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Invalid or expired token" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token"
+      });
     }
-    return res.status(500).json({ message: "Internal server error" });
+
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: error.errors.map(err => err.message)
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
-
 
 // exports.deletePages = async (req, res) => {
 //   try {
