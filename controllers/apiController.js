@@ -104,8 +104,8 @@ exports.getUnicUsersWithMeta = async (req, res) => {
 };
 exports.adduser = async (req, res) => {
   try {
-    const { name, role, password, email, profile_pic, address, phone, gender } =
-      req.query;
+    const { name, role, password, email, address, phone, gender } =
+      req.body;
     const hashedPassword = await bcrypt.hash(password, 10); // 10 is the salt rounds
     const newUser = await User.create({
       name,
@@ -117,14 +117,115 @@ exports.adduser = async (req, res) => {
     await UserMeta.create({
       userId: newUser.id,
       address,
-      profile_pic,
-      gender,
+      gender
     });
     res.json({ message: "Data Insert Successfully", success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.updateUser = async (req, res) => {
+  try {
+    const { id, name, role, password, email, address, phone, gender, status } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "User ID is required", success: false });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    // Prepare user update fields
+    const updatedData = {
+      ...(name && { name }),
+      ...(role && { role }),
+      ...(email && { email }),
+      ...(phone && { phone }),
+      ...(status !== undefined && { status }),
+    };
+
+    // If password is provided, hash it
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updatedData.password = hashedPassword;
+    }
+
+    await user.update(updatedData);
+
+    // Update or create user meta
+    const [meta, created] = await UserMeta.findOrCreate({
+      where: { userId: id },
+      defaults: {
+        address,
+        gender,
+      },
+    });
+
+    if (!created) {
+      await meta.update({
+        ...(address && { address }),
+        ...(gender && { gender }),
+      });
+    }
+
+    return res.json({ message: "User updated successfully", success: true });
+  } catch (err) {
+    console.error("Update User Error:", err);
+    res.status(500).json({ message: err.message, success: false });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "User ID is required", success: false });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success: false });
+    }
+
+    // Delete associated metadata first (if exists)
+    await UserMeta.destroy({ where: { userId: id } });
+
+    // Delete user
+    await user.destroy();
+
+    return res.json({ message: "User deleted successfully", success: true });
+  } catch (err) {
+    console.error("Delete User Error:", err);
+    return res.status(500).json({ message: err.message, success: false });
+  }
+};
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      include: [
+        {
+          model: UserMeta,
+          as: "meta", // make sure you have an alias in the model association if needed
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: users,
+    });
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;

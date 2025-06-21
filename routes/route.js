@@ -10,8 +10,12 @@ router.post("/auth/forgotPassword", apiController.forgotPassword);
 router.get("/auth/users", verifyToken, apiController.getUsersWithMeta);
 router.get("/auth/unicusers", verifyToken, apiController.getUnicUsersWithMeta);
 router.post("/auth/insertuser", verifyToken, apiController.adduser);
+router.post("/auth/updateUser", verifyToken, apiController.updateUser);
+router.get("/auth/getAllUsers", verifyToken, apiController.getAllUsers);
+
 router.get("/auth/getauthuser", verifyToken, apiController.getauthuser);
 router.post("/auth/updateAuthUser", verifyToken, apiController.updateAuthUser);
+router.post("/auth/deleteUser", verifyToken, apiController.deleteUser);
 router.post("/auth/updatePassword", verifyToken, apiController.updatePassword);
 router.post(
   "/auth/uploadProfilePic",
