@@ -3038,6 +3038,15 @@ exports.updatePages = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userIdFromToken = decoded.data.id;
 
+    // Input validation
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Page ID is required"
+      });
+    }
+
     // Find the page
     const page = await Pages.findByPk(id);
     if (!page) {
@@ -3142,21 +3151,8 @@ exports.updatePages = async (req, res) => {
       council_members: council_members.length > 0 ? JSON.stringify(council_members) : page.council_members
     };
 
-    if (typeof status !== "undefined") page.status = status;
-    if (typeof undeletable !== "undefined") page.undeletable = undeletable;
-    if (published_at) page.published_at = published_at;
-
-    if (featuredImageFile) page.featured_image = featuredImageFile.filename;
-    if (imagesFiles.length > 0) {
-      page.images = imagesFiles.map(file => file.filename).join(",");
-    }
-
-    // Update council members if any provided
-    if (council_members.length > 0) {
-      page.counsil_members = JSON.stringify(council_members);
-    }
-
-    await page.save();
+    // Update the page
+    await page.update(updateData);
 
     return res.status(200).json({
       success: true,
