@@ -3595,7 +3595,99 @@ exports.sendNotification = async (req, res) => {
   }
 };
 
+exports.addRole = async (req, res) => {
+  try {
+    // Token auth (optional - based on your app)
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.data.id;
+
+    const { role, permissions, status } = req.body;
+
+    // Basic validation
+    if (!role || !permissions) {
+      return res.status(400).json({ message: "Role and permissions are required" });
+    }
+
+    // Create new role
+    const newRole = await db.Roles.create({
+      role,
+      permissions,
+      status: status !== undefined ? status : 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return res.status(201).json({
+      message: "Role added successfully",
+      data: newRole,
+    });
+  } catch (error) {
+    console.error("Error adding role:", error);
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Role with the same permissions already exists" });
+    }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+exports.updateRole = async (req, res) => {
+  try {
+    const { id, role, permissions, status } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Role ID is required" });
+    }
+
+    // Find existing role
+    const existingRole = await db.Roles.findByPk(id);
+    if (!existingRole) {
+      return res.status(404).json({ message: "Role not found" });
+    }
+
+    // Update fields
+    existingRole.role = role || existingRole.role;
+    existingRole.permissions = permissions || existingRole.permissions;
+    existingRole.status = status !== undefined ? status : existingRole.status;
+    existingRole.updatedAt = new Date();
+
+    await existingRole.save();
+
+    return res.status(200).json({
+      message: "Role updated successfully",
+      data: existingRole,
+    });
+  } catch (error) {
+    console.error("Error updating role:", error);
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ message: "Permissions must be unique" });
+    }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.deleteRole = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Role ID is required" });
+    }
+
+    const role = await db.Roles.findByPk(id);
+    if (!role) {
+      return res.status(404).json({ message: "Role not found" });
+    }
+
+    await role.destroy();
+
+    return res.status(200).json({ message: "Role deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting role:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 exports.getApiDocumentation = (req, res) => {
   const documentation = {

@@ -15,11 +15,9 @@ router.post("/auth/updateAuthUser", verifyToken, apiController.updateAuthUser);
 router.post("/auth/updatePassword", verifyToken, apiController.updatePassword);
 router.post(
   "/auth/uploadProfilePic",
-   [
+  [
     verifyToken, // Auth middleware
-    upload.fields([
-      { name: "profile_pic", maxCount: 1 }
-    ]),
+    upload.fields([{ name: "profile_pic", maxCount: 1 }]),
   ],
   apiController.uploadProfilePic
 );
@@ -311,9 +309,9 @@ router.post(
 );
 
 router.post(
-  "/auth/updatepages",  
-    verifyToken, // Auth middleware
-   upload.any(),
+  "/auth/updatepages",
+  verifyToken, // Auth middleware
+  upload.any(),
   apiController.updatePages
 );
 
@@ -328,9 +326,9 @@ router.get(
 
 router.post("/auth/sendContactForm", apiController.sendContactForm);
 
-
 router.get(
-  "/auth/getDashboardData", verifyToken,
+  "/auth/getDashboardData",
+  verifyToken,
   apiController.getDashboardData
 );
 router.post(
@@ -340,4 +338,7 @@ router.post(
   apiController.sendNotification
 );
 
+router.post("/auth/addrole", verifyToken, apiController.addRole);
+router.post("/auth/updaterole", verifyToken, apiController.updateRole);
+router.post("/auth/deleterole", verifyToken, apiController.deleteRole);
 module.exports = router;
