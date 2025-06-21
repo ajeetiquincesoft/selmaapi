@@ -3699,6 +3699,25 @@ exports.deleteRole = async (req, res) => {
   }
 };
 
+exports.getAllRoles = async (req, res) => {
+  try {
+    const roles = await Roles.findAll();
+
+    res.status(200).json({
+      success: true,
+      message: "Roles fetched successfully",
+      data: roles,
+    });
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
 exports.getApiDocumentation = (req, res) => {
   const documentation = {
     authentication: {

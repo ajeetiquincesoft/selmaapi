@@ -341,4 +341,10 @@ router.post(
 router.post("/auth/addrole", verifyToken, apiController.addRole);
 router.post("/auth/updaterole", verifyToken, apiController.updateRole);
 router.post("/auth/deleterole", verifyToken, apiController.deleteRole);
+router.get(
+  "/auth/getallroles",
+  verifyToken,
+  apiController.getAllRoles
+);
+
 module.exports = router;
