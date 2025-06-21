@@ -38,6 +38,7 @@ db.RecyclingAndGarbageContent = require("./recyclingandgarbagecontent")(
 db.RecyclingAndGarbage = require("./recyclingandgarbage")(sequelize, DataTypes);
 db.PagesCategory = require("./pagescategory")(sequelize, DataTypes);
 db.Pages = require("./pages")(sequelize, DataTypes);
+db.Notifications= require("./notifications")(sequelize,DataTypes);
 // ✅ Associate after all models are initialized
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {

@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     /**
      * Add altering commands here.
      *
@@ -10,83 +10,88 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-       await queryInterface.createTable('pages', {
+    await queryInterface.createTable("pages", {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
       userId: {
         type: Sequelize.INTEGER,
-        references: { model: 'Users', key: 'id' }
+        references: { model: "Users", key: "id" },
       },
       title: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       description: {
         type: Sequelize.TEXT,
-        allowNull: false
+        allowNull: false,
       },
       shortdescription: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
       featured_image: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
       images: {
         type: Sequelize.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       category_id: {
         type: Sequelize.INTEGER,
-        references: { model: 'PagesCategory', key: 'id' }
+        references: { model: "PagesCategory", key: "id" },
       },
-        name: {
+      name: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
-        designation: {
+      designation: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
-        counsil_members: {
+      counsil_members: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
-        address: {
+      address: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
-       hours: {
+      hours: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
-        contacts: {
+      contacts: {
         type: Sequelize.STRING,
-        allowNull: true
+        allowNull: true,
       },
       status: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 1
+        defaultValue: 1,
+      },
+      undeletable: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
       },
       published_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
     });
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     /**
      * Add reverting commands here.
      *
@@ -94,6 +99,6 @@ module.exports = {
      * await queryInterface.dropTable('users');
      */
 
-     await queryInterface.dropTable('pages');
-  }
+    await queryInterface.dropTable("pages");
+  },
 };

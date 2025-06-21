@@ -15,6 +15,7 @@ const {
   RecyclingAndGarbage,
   PagesCategory,
   Pages,
+  Notifications
 } = require("../models");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -25,6 +26,56 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const { Op, fn, col, where, literal } = require("sequelize");
 const { sequelize } = require("../models");
 const admin = require("../firebase");
+
+// Common notification function
+const sendFirebaseNotification = async ({req, title, body, imageFilename = null, type = 'custom' }) => {
+  try {
+
+  const imageUrl = imageFilename
+  ? `${req.protocol}://${req.get("host")}/images/${imageFilename}`
+  : null;
+
+   
+
+        const message = {
+      notification: {
+        title,
+        body,
+        ...(imageUrl ? { image: imageUrl } : {}),
+      },
+      android: {
+        notification: {
+          sound: "default",
+          ...(imageUrl ? { imageUrl } : {}),
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+          },
+        },
+      },
+      topic: "all",
+    };
+
+    const firebaseResponse = await admin.messaging().send(message);
+
+    // Save to Notifications table
+    await Notifications.create({
+      title,
+      body,
+      image: imageFilename,
+      type,
+    });
+
+    return { success: true, firebaseResponse };
+  } catch (err) {
+    console.error("Firebase Notification Error:", err);
+    return { success: false, error: err.message };
+  }
+};
+
 exports.getUsersWithMeta = async (req, res) => {
   try {
     const users = await db.User.findAll({ include: db.UserMeta });
@@ -2897,6 +2948,7 @@ exports.addPages = async (req, res) => {
       contacts,
       hours,
       status,
+      undeletable,
       published_at,
     } = req.body;
 
@@ -2948,6 +3000,7 @@ exports.addPages = async (req, res) => {
       contacts,
       hours,
       status,
+      undeletable,
       published_at,
     });
 
@@ -2984,15 +3037,6 @@ exports.updatePages = async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userIdFromToken = decoded.data.id;
-
-    // Input validation
-    const { id } = req.body;
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "Page ID is required"
-      });
-    }
 
     // Find the page
     const page = await Pages.findByPk(id);
@@ -3098,8 +3142,21 @@ exports.updatePages = async (req, res) => {
       council_members: council_members.length > 0 ? JSON.stringify(council_members) : page.council_members
     };
 
-    // Update the page
-    await page.update(updateData);
+    if (typeof status !== "undefined") page.status = status;
+    if (typeof undeletable !== "undefined") page.undeletable = undeletable;
+    if (published_at) page.published_at = published_at;
+
+    if (featuredImageFile) page.featured_image = featuredImageFile.filename;
+    if (imagesFiles.length > 0) {
+      page.images = imagesFiles.map(file => file.filename).join(",");
+    }
+
+    // Update council members if any provided
+    if (council_members.length > 0) {
+      page.counsil_members = JSON.stringify(council_members);
+    }
+
+    await page.save();
 
     return res.status(200).json({
       success: true,
@@ -3507,8 +3564,6 @@ exports.getDashboardData = async (req, res) => {
 exports.sendNotification = async (req, res) => {
   try {
     const { title, body } = req.body;
-
-    // Image file (if provided via upload)
     const imageFile = req.files?.find(file => file.fieldname === "image");
 
     if (!title || !body) {
@@ -3516,32 +3571,34 @@ exports.sendNotification = async (req, res) => {
     }
 
     let imageUrl = null;
+    let imageFilename = null;
+
     if (imageFile) {
-      imageUrl = `${req.protocol}://${req.get("host")}/images/${imageFile.filename}`;
+      imageFilename = imageFile.filename;
+      imageUrl = `${req.protocol}://${req.get("host")}/images/${imageFilename}`;
     }
 
-    const message = {
-      notification: {
-        title,
-        body,
-        ...(imageUrl ? { image: imageUrl } : {}),
-      },
-      topic: "all",
-    };
-
-    const response = await admin.messaging().send(message);
+    const response= await sendFirebaseNotification({
+      req:req,
+      title:title,
+      body:body,
+      imageFilename:imageFilename,
+      type:'custom'
+    });
 
     res.json({
       success: true,
-      message: "Notification sent to topic: all",
+      message: "Notification sent to all users",
       firebaseResponse: response,
-      imageUrl,
+      imageFilename,
     });
   } catch (error) {
     console.error("Notification Error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+
 
 exports.getApiDocumentation = (req, res) => {
   const documentation = {
