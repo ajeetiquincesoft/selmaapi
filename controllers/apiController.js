@@ -35,27 +35,7 @@ const sendFirebaseNotification = async ({req, title, body, imageFilename = null,
   ? `${req.protocol}://${req.get("host")}/images/${imageFilename}`
   : null;
 
-    // const message = {
-    //   notification: {
-    //     title,
-    //     body,
-    //     ...(imageUrl ? { image: imageUrl } : {}),
-    //   },
-    //   android: {
-    //     notification: {
-    //       sound: "default",
-    //       ...(imageUrl ? { imageUrl } : {}),
-    //     },
-    //   },
-    //   apns: {
-    //     payload: {
-    //       aps: {
-    //         sound: "default",
-    //       },
-    //     },
-    //   },
-    //   topic: "all",
-    // };
+   
 
         const message = {
       notification: {
