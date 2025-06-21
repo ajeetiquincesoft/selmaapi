@@ -27,6 +27,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const { Op, fn, col, where, literal } = require("sequelize");
 const { sequelize } = require("../models");
 const admin = require("../firebase");
+const roles = require("../models/roles");
 
 // Common notification function
 const sendFirebaseNotification = async ({req, title, body, imageFilename = null, type = 'custom' }) => {
@@ -158,6 +159,7 @@ exports.getauthuser = async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.data.id;
 
+    // Get user with meta
     const user = await db.User.findOne({
       where: { id: userId },
       include: [{ model: db.UserMeta, as: "meta" }],
@@ -167,13 +169,23 @@ exports.getauthuser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
+    // Get role permissions separately based on user.role
+    const roleData = await Roles.findOne({
+      where: { role: user.role },
+      attributes: ["permissions"],
+    });
 
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
     if (user.meta?.profile_pic) {
       user.meta.profile_pic = baseUrl + user.meta.profile_pic;
     }
 
-    res.status(200).json(user);
+    const responseData = {
+      ...user.toJSON(),
+      permissions: roleData?.permissions || null,
+    };
+
+    res.status(200).json(responseData);
   } catch (err) {
     console.error("Get Auth User Error:", err);
     if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
@@ -182,6 +194,7 @@ exports.getauthuser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 exports.updateAuthUser = async (req, res) => {
   try {
     // 1. Extract token
