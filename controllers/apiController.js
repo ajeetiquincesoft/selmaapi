@@ -3145,6 +3145,7 @@ exports.updatePages = async (req, res) => {
       contacts: req.body.contacts || page.contacts,
       hours: req.body.hours || page.hours,
       status: typeof req.body.status !== 'undefined' ? req.body.status : page.status,
+      undeletable: typeof req.body.undeletable !== 'undefined' ? req.body.undeletable : page.undeletable,
       published_at: req.body.published_at || page.published_at,
       featured_image: featured_image,
       images: images.join(','),
