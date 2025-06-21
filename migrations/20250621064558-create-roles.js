@@ -19,8 +19,7 @@ module.exports = {
       role: Sequelize.STRING,
       userpermissions: {
         type: Sequelize.TEXT,
-        unique: true, // <-- this ensures email uniqueness
-        allowNull: false,
+        allowNull: false
       },
       status: {
         type: Sequelize.INTEGER,
