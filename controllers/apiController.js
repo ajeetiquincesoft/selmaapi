@@ -15,7 +15,8 @@ const {
   RecyclingAndGarbage,
   PagesCategory,
   Pages,
-  Notifications
+  Notifications,
+  Roles
 } = require("../models");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -3612,12 +3613,9 @@ exports.addRole = async (req, res) => {
     }
 
     // Create new role
-    const newRole = await db.Roles.create({
+    const newRole = await Roles.create({
       role,
-      permissions,
-      status: status !== undefined ? status : 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      permissions
     });
 
     return res.status(201).json({
@@ -3641,7 +3639,7 @@ exports.updateRole = async (req, res) => {
     }
 
     // Find existing role
-    const existingRole = await db.Roles.findByPk(id);
+    const existingRole = await Roles.findByPk(id);
     if (!existingRole) {
       return res.status(404).json({ message: "Role not found" });
     }
@@ -3650,7 +3648,6 @@ exports.updateRole = async (req, res) => {
     existingRole.role = role || existingRole.role;
     existingRole.permissions = permissions || existingRole.permissions;
     existingRole.status = status !== undefined ? status : existingRole.status;
-    existingRole.updatedAt = new Date();
 
     await existingRole.save();
 
