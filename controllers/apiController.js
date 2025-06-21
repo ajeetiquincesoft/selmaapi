@@ -2801,6 +2801,7 @@ exports.addPages = async (req, res) => {
       contacts,
       hours,
       status,
+      undeletable,
       published_at,
     } = req.body;
 
@@ -2852,6 +2853,7 @@ exports.addPages = async (req, res) => {
       contacts,
       hours,
       status,
+      undeletable,
       published_at,
     });
 
@@ -2888,6 +2890,7 @@ exports.updatePages = async (req, res) => {
       contacts,
       hours,
       status,
+      undeletable,
       published_at,
     } = req.body;
 
@@ -2938,6 +2941,7 @@ exports.updatePages = async (req, res) => {
     if (hours) page.hours = hours;
 
     if (typeof status !== "undefined") page.status = status;
+    if (typeof undeletable !== "undefined") page.undeletable = undeletable;
     if (published_at) page.published_at = published_at;
 
     if (featuredImageFile) page.featured_image = featuredImageFile.filename;
