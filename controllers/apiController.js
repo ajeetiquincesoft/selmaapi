@@ -230,23 +230,39 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find user by email
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(400).json({ message: "User not valid" });
     }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
 
+    // Compare password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
+    // Fetch permissions from Roles table manually (based on role name or ID)
+    const roleData = await Roles.findOne({ where: { role: user.role } });
+    const permissions = roleData?.permissions || {};
+
+    // Create JWT payload
     const payload = {
-      data: user,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions,
+      },
     };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "28d" });
+
+    // Sign token
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "28d" });
+
     res.json({ payload, token });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -283,7 +299,7 @@ exports.getauthuser = async (req, res) => {
 
     const responseData = {
       ...user.toJSON(),
-      permissions: roleData?.permissions || null,
+      permissions: roleData?.permissions || {},
     };
 
     res.status(200).json(responseData);
