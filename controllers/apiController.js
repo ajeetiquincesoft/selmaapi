@@ -3608,7 +3608,7 @@ exports.getDashboardData = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const { id, name, email } = decoded.data;
+    const { id, name, email,role } = decoded.data;
 
     const [jobCount, newsCount, eventCount, latestJobs, latestNews, latestEvents] = await Promise.all([
       Jobs.count(),
@@ -3661,7 +3661,7 @@ exports.getDashboardData = async (req, res) => {
 
     return res.status(200).json({
       message: "Dashboard data fetched successfully",
-      user: { id, name, email },
+      user: { id, name, email,role },
       data: {
         counts: {
           jobCount,
