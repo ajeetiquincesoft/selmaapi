@@ -3404,7 +3404,7 @@ exports.getAllPages = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { keyword = "", categoryName = "", status = 1 } = req.query;
+    const { keyword = "", category_id = "", status = 1 } = req.query;
 
     const whereClause = {};
     if (status !== "all") {
@@ -3420,10 +3420,10 @@ exports.getAllPages = async (req, res) => {
       ];
     }
 
-    // Category filter
-    const categoryWhere = categoryName
-      ? { name: { [Op.like]: `%${categoryName}%` } }
-      : {};
+    // Add category_id directly to the main whereClause
+    if (category_id) {
+      whereClause.category_id = category_id;
+    }
 
     const { count, rows } = await Pages.findAndCountAll({
       where: whereClause,
@@ -3435,8 +3435,6 @@ exports.getAllPages = async (req, res) => {
           model: PagesCategory,
           as: "category",
           attributes: ["id", "name"],
-          where: categoryWhere,
-          required: categoryName !== "",
         },
       ],
     });
