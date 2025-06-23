@@ -709,11 +709,13 @@ exports.getAllNews = async (req, res) => {
     const offset = (page - 1) * limit;
     const keyword = req.query.keyword || "";
     const status = typeof req.query.status !== "undefined" ? req.query.status : 1;
+    const category_id = req.query.category_id || null;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereCondition = {
-      ...(status !== "all" && { status }), // Only apply status filter if not "all"
+      ...(status !== "all" && { status }),
+      ...(category_id && { category_id }),
       [Op.or]: [
         { title: { [Op.like]: `%${keyword}%` } },
         { shortdescription: { [Op.like]: `%${keyword}%` } },
@@ -721,7 +723,7 @@ exports.getAllNews = async (req, res) => {
       ],
     };
 
-    const finalWhere = keyword || status !== "all" ? whereCondition : {};
+    const finalWhere = keyword || status !== "all" || category_id ? whereCondition : {};
 
     const { count, rows: news } = await News.findAndCountAll({
       where: finalWhere,
@@ -1178,17 +1180,30 @@ exports.updateJob = async (req, res) => {
 
 exports.getAllJobs = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; // Default to page 1
-    const limit = parseInt(req.query.limit) || 10; // Default 10 items per page
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const status = req.query.status !== undefined ? req.query.status : 1; // Default to 1
+    const status = req.query.status !== undefined ? req.query.status : 1;
+    const keyword = req.query.keyword || "";
+    const category_id = req.query.category_id || null;
+
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
-    const whereClause = status === "all" ? {} : { status };
+    const whereClause = {
+      ...(status !== "all" && { status }),
+      ...(category_id && { category_id }),
+      [Op.or]: [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { shortdescription: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+      ],
+    };
+
+    const finalWhere = keyword || status !== "all" || category_id ? whereClause : {};
 
     const { count, rows: jobs } = await Jobs.findAndCountAll({
-      where: whereClause,
+      where: finalWhere,
       limit,
       offset,
       order: [["published_at", "DESC"]],
@@ -1215,8 +1230,9 @@ exports.getAllJobs = async (req, res) => {
 
     return res.status(200).json({
       success: updatedJobs.length > 0,
-      message:
-        updatedJobs.length > 0 ? "Jobs fetched successfully" : "No jobs found",
+      message: updatedJobs.length > 0
+        ? "Jobs fetched successfully"
+        : "No jobs found",
       data: updatedJobs,
       pagination: {
         totalItems: count,
@@ -1229,6 +1245,7 @@ exports.getAllJobs = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 exports.getJobsByCategoryId = async (req, res) => {
@@ -1644,12 +1661,13 @@ exports.getAllEvents = async (req, res) => {
     if (status !== "all") whereConditions.status = status;
 
     // 🔍 Keyword Search
-    // if (keyword) {
-    //   whereConditions[Op.or] = [
-    //     { title: { [Op.like]: `%${keyword}%` } },
-    //     { description: { [Op.like]: `%${keyword}%` } },
-    //   ];
-    // }
+    if (keyword) {
+      whereConditions[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { shortdescription: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
 
     // 📅 Date Filter
     const dateFilters = [];
@@ -1730,6 +1748,7 @@ exports.getAllEvents = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.getEventById = async (req, res) => {
   try {
@@ -2498,16 +2517,29 @@ exports.getAllParksAndRecreation = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const status = req.query.status !== undefined ? req.query.status : 1;
+
+    const { status = 1, keyword = "", categoryName = "" } = req.query;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
+    // Build where clause
     const whereClause = {};
-
-    // Only apply status filter if it's not "all"
     if (status !== "all") {
       whereClause.status = status;
     }
+
+    if (keyword) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { shortdescription: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
+
+    // Filter for category name if provided
+    const categoryWhere = categoryName
+      ? { name: { [Op.like]: `%${categoryName}%` } }
+      : {};
 
     const { count, rows } = await ParksAndRecreation.findAndCountAll({
       where: whereClause,
@@ -2519,6 +2551,7 @@ exports.getAllParksAndRecreation = async (req, res) => {
           model: ParksAndRecreationCategory,
           as: "category",
           attributes: ["id", "name"],
+          where: categoryWhere,
         },
         {
           model: User,
@@ -2546,7 +2579,7 @@ exports.getAllParksAndRecreation = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "All Parks and Recreation items fetched successfully",
+      message: "Parks and Recreation items fetched successfully",
       data: updatedRows,
       pagination: {
         totalItems: count,
@@ -2909,19 +2942,41 @@ exports.deleteRecyclingAndGarbage = async (req, res) => {
 };
 exports.getAllRecyclingAndGarbage = async (req, res) => {
   try {
-    const status = req.query.status !== undefined ? req.query.status : 1;
+    const { keyword = "", categoryName = "", status = 1 } = req.query;
+
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
     }
 
+    // 🔍 Keyword filter
+    if (keyword) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
+
+    // Category filter (if you are joining a category table)
+    const categoryWhere = categoryName
+      ? { name: { [Op.like]: `%${categoryName}%` } }
+      : {};
+
     const records = await RecyclingAndGarbage.findAll({
       where: whereClause,
       order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: RecyclingAndGarbageContent,
+          as: "category",
+          attributes: ["id", "name"],
+          where: categoryWhere,
+          required: categoryName !== "", // Only apply join if filtering
+        },
+      ],
     });
-
-    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
     const updatedRecords = records.map((record) => ({
       ...record.toJSON(),
@@ -2937,6 +2992,7 @@ exports.getAllRecyclingAndGarbage = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 exports.getRecyclingAndGarbageById = async (req, res) => {
@@ -3368,12 +3424,26 @@ exports.getAllPages = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const status = req.query.status !== undefined ? req.query.status : 1;
+    const { keyword = "", categoryName = "", status = 1 } = req.query;
 
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
     }
+
+    // Keyword filter (title, description, shortdescription)
+    if (keyword) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } },
+        { shortdescription: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
+
+    // Category filter
+    const categoryWhere = categoryName
+      ? { name: { [Op.like]: `%${categoryName}%` } }
+      : {};
 
     const { count, rows } = await Pages.findAndCountAll({
       where: whereClause,
@@ -3385,6 +3455,8 @@ exports.getAllPages = async (req, res) => {
           model: PagesCategory,
           as: "category",
           attributes: ["id", "name"],
+          where: categoryWhere,
+          required: categoryName !== "",
         },
       ],
     });
@@ -3428,6 +3500,7 @@ exports.getAllPages = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.getPageById = async (req, res) => {
   try {
