@@ -2942,16 +2942,15 @@ exports.deleteRecyclingAndGarbage = async (req, res) => {
 };
 exports.getAllRecyclingAndGarbage = async (req, res) => {
   try {
-    const { keyword = "", categoryName = "", status = 1 } = req.query;
-
+    const { keyword = "", status = 1 } = req.query;
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
+    // Main where clause
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
     }
 
-    // 🔍 Keyword filter
     if (keyword) {
       whereClause[Op.or] = [
         { title: { [Op.like]: `%${keyword}%` } },
@@ -2959,23 +2958,10 @@ exports.getAllRecyclingAndGarbage = async (req, res) => {
       ];
     }
 
-    // Category filter (if you are joining a category table)
-    const categoryWhere = categoryName
-      ? { name: { [Op.like]: `%${categoryName}%` } }
-      : {};
-
     const records = await RecyclingAndGarbage.findAll({
       where: whereClause,
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: RecyclingAndGarbageContent,
-          as: "category",
-          attributes: ["id", "name"],
-          where: categoryWhere,
-          required: categoryName !== "", // Only apply join if filtering
-        },
-      ],
+      order: [["createdAt", "DESC"]]
+    
     });
 
     const updatedRecords = records.map((record) => ({
