@@ -1652,7 +1652,7 @@ exports.getAllEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { keyword, dateFrom, dateTo, categoryName } = req.query;
+    const { keyword, dateFrom, dateTo, category_id } = req.query;
     const status = req.query.status !== undefined ? req.query.status : 1;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
@@ -1695,10 +1695,10 @@ exports.getAllEvents = async (req, res) => {
       whereConditions[Op.and] = [...(whereConditions[Op.and] || []), ...dateFilters];
     }
 
-    // 📂 Category Name Filter
-    const categoryWhere = categoryName
-      ? { name: { [Op.like]: `%${categoryName}%` } }
-      : {};
+    // 📂 Filter by category_id
+    if (category_id) {
+      whereConditions.category_id = category_id;
+    }
 
     const { count, rows: events } = await Events.findAndCountAll({
       where: whereConditions,
@@ -1710,7 +1710,6 @@ exports.getAllEvents = async (req, res) => {
           model: EventsCategory,
           as: "category",
           attributes: ["id", "name"],
-          where: categoryWhere,
         },
         {
           model: User,
@@ -1732,10 +1731,7 @@ exports.getAllEvents = async (req, res) => {
 
     return res.status(200).json({
       success: updatedEvents.length > 0,
-      message:
-        updatedEvents.length > 0
-          ? "Events fetched successfully"
-          : "No events found",
+      message: updatedEvents.length > 0 ? "Events fetched successfully" : "No events found",
       data: updatedEvents,
       pagination: {
         total: count,
@@ -1748,7 +1744,6 @@ exports.getAllEvents = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 exports.getEventById = async (req, res) => {
   try {
