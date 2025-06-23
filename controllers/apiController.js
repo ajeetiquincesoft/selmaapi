@@ -2513,11 +2513,11 @@ exports.getAllParksAndRecreation = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { status = 1, keyword = "", categoryName = "" } = req.query;
+    const { status = 1, keyword = "", category_id = "" } = req.query;
 
     const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
 
-    // Build where clause
+    // Build main where clause
     const whereClause = {};
     if (status !== "all") {
       whereClause.status = status;
@@ -2531,10 +2531,10 @@ exports.getAllParksAndRecreation = async (req, res) => {
       ];
     }
 
-    // Filter for category name if provided
-    const categoryWhere = categoryName
-      ? { name: { [Op.like]: `%${categoryName}%` } }
-      : {};
+    // Apply category_id filter directly to the main model
+    if (category_id) {
+      whereClause.category_id = category_id;
+    }
 
     const { count, rows } = await ParksAndRecreation.findAndCountAll({
       where: whereClause,
@@ -2546,7 +2546,6 @@ exports.getAllParksAndRecreation = async (req, res) => {
           model: ParksAndRecreationCategory,
           as: "category",
           attributes: ["id", "name"],
-          where: categoryWhere,
         },
         {
           model: User,
