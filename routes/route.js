@@ -342,6 +342,13 @@ router.post(
   apiController.sendNotification
 );
 
+
+router.get(
+  "/auth/getAllNotifications",
+  verifyToken,
+  apiController.getAllNotifications
+);
+
 router.post("/auth/addrole", verifyToken, apiController.addRole);
 router.post("/auth/updaterole", verifyToken, apiController.updateRole);
 router.post("/auth/deleterole", verifyToken, apiController.deleteRole);

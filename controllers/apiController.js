@@ -3777,6 +3777,58 @@ exports.sendNotification = async (req, res) => {
   }
 };
 
+exports.getAllNotifications = async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get("host")}/images/`;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { keyword = "", status = 1 } = req.query;
+
+    const whereClause = {};
+    if (status !== "all") {
+      whereClause.status = status;
+    }
+
+    if (keyword) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { body: { [Op.like]: `%${keyword}%` } },
+        { type: { [Op.like]: `%${keyword}%` } },
+      ];
+    }
+
+    const { count, rows } = await Notifications.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
+    const updatedNotifications = rows.map((item) => {
+      const jsonItem = item.toJSON();
+      jsonItem.image = jsonItem.image ? baseUrl + jsonItem.image : null;
+      return jsonItem;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notifications fetched successfully",
+      data: updatedNotifications,
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 exports.addRole = async (req, res) => {
   try {
     // Token auth (optional - based on your app)
