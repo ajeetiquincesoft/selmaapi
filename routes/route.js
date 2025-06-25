@@ -345,7 +345,6 @@ router.post(
 
 router.get(
   "/auth/getAllNotifications",
-  verifyToken,
   apiController.getAllNotifications
 );
 
