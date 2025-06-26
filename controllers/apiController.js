@@ -30,16 +30,16 @@ const admin = require("../firebase");
 const roles = require("../models/roles");
 
 // Common notification function
-const sendFirebaseNotification = async ({req, title, body, imageFilename = null, type = 'custom' }) => {
+const sendFirebaseNotification = async ({ req, title, body, imageFilename = null, type = 'custom' }) => {
   try {
 
-  const imageUrl = imageFilename
-  ? `${req.protocol}://${req.get("host")}/images/${imageFilename}`
-  : null;
+    const imageUrl = imageFilename
+      ? `${req.protocol}://${req.get("host")}/images/${imageFilename}`
+      : null;
 
-   
 
-        const message = {
+
+    const message = {
       notification: {
         title,
         body,
@@ -2955,7 +2955,7 @@ exports.getAllRecyclingAndGarbage = async (req, res) => {
     const records = await RecyclingAndGarbage.findAll({
       where: whereClause,
       order: [["createdAt", "DESC"]]
-    
+
     });
 
     const updatedRecords = records.map((record) => ({
@@ -3170,7 +3170,17 @@ exports.addPages = async (req, res) => {
       undeletable,
       published_at,
     });
-
+    try {
+      await sendFirebaseNotification({
+        req, // If needed inside sendFirebaseNotification
+        title: `New Page Added: ${title}`,
+        body:  "A new page has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
     return res.status(201).json({
       message: "Page added successfully",
       data: page,
@@ -3659,7 +3669,7 @@ exports.getDashboardData = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const { id, name, email,role } = decoded.data;
+    const { id, name, email, role } = decoded.data;
 
     const [jobCount, newsCount, eventCount, latestJobs, latestNews, latestEvents] = await Promise.all([
       Jobs.count(),
@@ -3712,7 +3722,7 @@ exports.getDashboardData = async (req, res) => {
 
     return res.status(200).json({
       message: "Dashboard data fetched successfully",
-      user: { id, name, email,role },
+      user: { id, name, email, role },
       data: {
         counts: {
           jobCount,
@@ -3757,12 +3767,12 @@ exports.sendNotification = async (req, res) => {
       imageUrl = `${req.protocol}://${req.get("host")}/images/${imageFilename}`;
     }
 
-    const response= await sendFirebaseNotification({
-      req:req,
-      title:title,
-      body:body,
-      imageFilename:imageFilename,
-      type:'custom'
+    const response = await sendFirebaseNotification({
+      req: req,
+      title: title,
+      body: body,
+      imageFilename: imageFilename,
+      type: 'custom'
     });
 
     res.json({
