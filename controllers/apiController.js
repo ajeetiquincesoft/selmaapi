@@ -687,6 +687,20 @@ exports.addNews = async (req, res) => {
       published_at,
     });
 
+    try {
+      const response = await sendFirebaseNotification({
+        title: `New News Added: ${title}`,
+        body: "A new News has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+      console.error("Notification Send:", response);
+
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
+
+
     return res.status(201).json({
       message: "News added successfully",
       data: news,
@@ -1103,6 +1117,18 @@ exports.addJob = async (req, res) => {
       status,
       published_at,
     });
+    try {
+      const response = await sendFirebaseNotification({
+        title: `New Job Added: ${title}`,
+        body: "A new Job has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+      console.error("Notification Send:", response);
+
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
 
     return res.status(201).json({
       message: "Job added successfully",
@@ -1511,6 +1537,18 @@ exports.addEvent = async (req, res) => {
       status,
       published_at,
     });
+    try {
+      const response = await sendFirebaseNotification({
+        title: `New Event Added: ${title}`,
+        body: "A new Event has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+      console.error("Notification Send:", response);
+
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
 
     // 5. Respond
     return res.status(201).json({
@@ -2183,6 +2221,19 @@ exports.addParksAndRecreation = async (req, res) => {
       status: status || 1,
       published_at,
     });
+
+    try {
+      const response = await sendFirebaseNotification({
+        title: `New Parks And Recreation  Added: ${title}`,
+        body: "A new Parks And Recreation has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+      console.error("Notification Send:", response);
+
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
 
     // 5. Respond with success
     return res.status(201).json({
@@ -2859,6 +2910,19 @@ exports.addRecyclingAndGarbage = async (req, res) => {
       shortdescription,
       status: status || 1,
     });
+
+    try {
+      const response = await sendFirebaseNotification({
+        title: `New Recycling And Garbage Data Added: ${title}`,
+        body: "A new  Recycling And Garbage Data has been published.",
+        imageFilename: null,
+        type: "custom",
+      });
+      console.error("Notification Send:", response);
+
+    } catch (notifErr) {
+      console.error("Notification Send Error:", notifErr.message);
+    }
 
     return res.status(201).json({
       message: "Recycling and Garbage content created successfully",
