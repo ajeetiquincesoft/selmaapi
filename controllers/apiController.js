@@ -3171,13 +3171,14 @@ exports.addPages = async (req, res) => {
       published_at,
     });
     try {
-      await sendFirebaseNotification({
-        req, // If needed inside sendFirebaseNotification
+      const response = await sendFirebaseNotification({
         title: `New Page Added: ${title}`,
-        body:  "A new page has been published.",
+        body: "A new page has been published.",
         imageFilename: null,
         type: "custom",
       });
+      console.error("Notification Send:", response);
+
     } catch (notifErr) {
       console.error("Notification Send Error:", notifErr.message);
     }
