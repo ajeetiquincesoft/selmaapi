@@ -843,7 +843,7 @@ exports.uploadNews = async (req, res) => {
         featured_image: featuredImageFilename,
         images: null,
         category_id: categoryId || 1,
-        status: item.inStock?.[0] === "Y" ? "published" : "draft",
+        status:1,
         published_at: mysqlDate,
       };
 
