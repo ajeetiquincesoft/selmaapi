@@ -28,6 +28,14 @@ const { Op, fn, col, where, literal } = require("sequelize");
 const { sequelize } = require("../models");
 const admin = require("../firebase");
 const roles = require("../models/roles");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" }); // temporary folder
+const xml2js = require("xml2js");
+const axios = require("axios");
+const { parseRFC2822 } = require('date-fns');
+const cheerio = require("cheerio");
+
+
 
 // Common notification function
 const sendFirebaseNotification = async ({ req, title, body, imageFilename = null, type = 'custom' }) => {
@@ -716,6 +724,150 @@ exports.addNews = async (req, res) => {
   }
 };
 
+function formatDateToMySQL(date) {
+  // "YYYY-MM-DD HH:MM:SS"
+  return date.toISOString().slice(0, 19).replace("T", " ");
+}
+
+
+async function downloadImage(imageUrl, uploadPath) {
+  try {
+    const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+    const ext = path.extname(imageUrl).split("?")[0] || ".jpg"; // extension handle
+    const filename = Date.now() + ext; // unique filename
+    const filepath = path.join(uploadPath, filename);
+
+    fs.writeFileSync(filepath, response.data);
+    return filename; // DB me sirf filename jayega
+  } catch (err) {
+    console.error("Error downloading image:", err.message);
+    return null; // agar download fail ho jaye to null
+  }
+}
+
+async function fetchDescriptionFromLink(url) {
+  try {
+
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+
+    let description = "";
+
+    // 🔹 subscriber-preview
+    $("#article-body .subscriber-preview p, #article-body .subscriber-only p").each((i, el) => {
+      if (!$(el).parents('[style*="display:none"]').length) {
+        description += $.html(el) + "\n";
+      }
+    });
+    // 🔹 subscriber-only
+
+    return description.trim(); // final plain text
+  } catch (err) {
+    console.error("Error fetching description:", err.message);
+    return err.message;
+  }
+}
+
+exports.uploadNews = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.data.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No XML file uploaded" });
+    }
+
+    const xmlData = fs.readFileSync(req.file.path, "utf-8");
+
+    const parser = new xml2js.Parser({
+      explicitArray: true,
+      tagNameProcessors: [xml2js.processors.stripPrefix],
+    });
+    const result = await parser.parseStringPromise(xmlData);
+
+    const items = result?.rss?.channel?.[0]?.item || [];
+    let inserted = [];
+
+    const uploadPath = path.join(__dirname, "../images");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    for (let item of items) {
+      let featuredImageFilename = null;
+      const imageUrl = item.enclosure?.[0]?.$.url;
+      if (imageUrl) {
+        featuredImageFilename = await downloadImage(imageUrl, uploadPath);
+      }
+
+      let categoryName = "";
+      let categoryId = null;
+      if (item.category && item.category.length > 0) {
+        categoryName = item.category[0];
+        if (typeof categoryName === "object" && "_" in categoryName) {
+          categoryName = categoryName._;
+        }
+        const parts = categoryName.split(">");
+        categoryName = parts[parts.length - 1].trim();
+      }
+
+      if (categoryName) {
+        let category = await NewsCategory.findOne({ where: { name: categoryName } });
+        if (!category) {
+          category = await NewsCategory.create({ name: categoryName, userId });
+        }
+        categoryId = category.id;
+      }
+
+      // ✅ Handle pubDate
+      const pubDateStr = item.pubDate?.[0];
+      let publishedAt = pubDateStr ? new Date(pubDateStr) : new Date();
+      const mysqlDate = formatDateToMySQL(publishedAt);
+
+      // ✅ Fetch description from link if XML description missing
+      let shortdescription = item.description?.[0] || "";
+      const link = item.link?.[0];
+      if (link) {
+        description = await fetchDescriptionFromLink(link);
+      }
+
+      const newsData = {
+        userId,
+        title: item.title?.[0] || "",
+        shortdescription: shortdescription, // aap chaho to description field me bhi save kar sakte ho
+        description: description, // aap chaho to description field me bhi save kar sakte ho
+        featured_image: featuredImageFilename,
+        images: null,
+        category_id: categoryId || 1,
+        status: item.inStock?.[0] === "Y" ? "published" : "draft",
+        published_at: mysqlDate,
+      };
+
+      const news = await News.create(newsData);
+      inserted.push(news);
+    }
+
+    return res.status(201).json({
+      message: "XML News uploaded successfully",
+      count: inserted.length,
+      data: inserted,
+    });
+  } catch (error) {
+    console.error("Error uploading news:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+
 exports.getAllNews = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -781,10 +933,6 @@ exports.getAllNews = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
-
-
 
 exports.getNewsById = async (req, res) => {
   try {
@@ -4062,6 +4210,7 @@ exports.getApiDocumentation = (req, res) => {
         auth: true,
         multipart: true,
       },
+      upload: { method: "POST", path: "/auth/uploadnews", auth: true, multipart: true },
       update: { method: "POST", path: "/auth/updatenews", auth: true },
       delete: { method: "POST", path: "/auth/deletenews", auth: true },
       getAll: { method: "GET", path: "/auth/getallnews" },

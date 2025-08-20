@@ -7,6 +7,7 @@ router.get("/auth/apidocs", apiController.getApiDocumentation);
 router.post("/auth/login", apiController.login);
 router.post("/auth/forgotPassword", apiController.forgotPassword);
 
+
 router.get("/auth/users", verifyToken, apiController.getUsersWithMeta);
 router.get("/auth/unicusers", verifyToken, apiController.getUnicUsersWithMeta);
 router.post("/auth/insertuser", verifyToken, apiController.adduser);
@@ -52,6 +53,13 @@ router.post(
   ],
   apiController.addNews
 );
+router.post(
+  "/auth/uploadNews",
+  verifyToken,
+  upload.single("xmlFile"),   // यहाँ xmlFile field की फाइल आएगी
+  apiController.uploadNews
+);
+
 router.post(
   "/auth/updatenews",
   upload.fields([
